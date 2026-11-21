@@ -1,0 +1,16 @@
+{
+  "name": "@tusky/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.10",
+    "pg-boss": "^12.38.2",
+    "pino": "^10.4.0",
+    "pino-pretty": "^13.2.0",
+    "zod": "^4.6.7"
+  }
+}

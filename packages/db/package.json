@@ -1,0 +1,21 @@
+{
+  "name": "@tusky/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "seed": "tsx src/seed.ts",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@tusky/shared": "*",
+    "dotenv": "^18.0.10",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1"
+  }
+}

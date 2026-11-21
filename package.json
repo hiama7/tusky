@@ -1,0 +1,32 @@
+{
+  "name": "tusky",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "scheduler",
+    "scrapper-service"
+  ],
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:generate": "npm run generate -w @tusky/db",
+    "db:migrate": "npm run migrate -w @tusky/db",
+    "db:seed": "npm run seed -w @tusky/db",
+    "db:studio": "npm run studio -w @tusky/db",
+    "dev:scheduler": "npm run dev -w @tusky/scheduler --",
+    "dev:scraper": "npm run dev -w @tusky/scrapper-service --",
+    "scrape:player": "npm run scrape:player -w @tusky/scrapper-service --",
+    "player:import": "npm run player:import -w @tusky/scrapper-service --",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node test/run-vitest.mjs run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  }
+}

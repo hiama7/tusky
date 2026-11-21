@@ -1,0 +1,30 @@
+[
+  {
+    "player": { "name": "Example Striker", "sport": "football", "team": "Example FC", "position": "Attacker" },
+    "history": {
+      "summary": "Sample manually-entered profile. Replace with real scouting notes: a penalty-box striker who relies on service from wide areas and is most dangerous against high defensive lines.",
+      "recentForm": [{ "period": "last 5 matches", "summary": "3 goals, 1 assist", "rating": 7.4 }],
+      "winConditions": [
+        {
+          "situation": "home games",
+          "impact": "Scores roughly twice as often at home as away",
+          "evidence": "8 of 11 league goals at home",
+          "sourceUrl": null
+        }
+      ],
+      "lossConditions": [
+        {
+          "situation": "vs low-block defences",
+          "impact": "Shot volume drops sharply when space behind is removed",
+          "evidence": null,
+          "sourceUrl": null
+        }
+      ],
+      "strengths": ["finishing", "movement in the box"],
+      "weaknesses": ["link-up play", "pressing"],
+      "injuries": [],
+      "keyStats": [{ "name": "conversion rate", "value": "21%", "context": "league, current season" }]
+    },
+    "stats": [{ "season": "2025", "competition": "Example League", "stats": { "appearances": 14, "goals": 11, "assists": 3 } }]
+  }
+]

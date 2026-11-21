@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: tusky-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tusky
+      POSTGRES_PASSWORD: tusky
+      POSTGRES_DB: tusky
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - tusky-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tusky -d tusky"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  tusky-pgdata:

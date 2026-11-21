@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/*.config.ts",
+    "packages/*/test/**/*.ts",
+    "scheduler/src/**/*.ts",
+    "scheduler/test/**/*.ts",
+    "test/**/*.ts",
+    "vitest.config.ts",
+    "scrapper-service/src/**/*.ts",
+    "scrapper-service/scripts/**/*.ts",
+    "scrapper-service/test/**/*.ts"
+  ]
+}
