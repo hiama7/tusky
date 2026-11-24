@@ -87,7 +87,7 @@ export class BasketballAdapter implements SportAdapter {
   async fetchUpcoming(dates: string[]): Promise<NormalizedFixture[]> {
     const out: NormalizedFixture[] = [];
     for (const date of dates) {
-      const raw = await this.client.get<RawBasketballGame>("/games", { date, timezone: "UTC" });
+      const raw = await this.client.getDate<RawBasketballGame>("/games", date);
       for (const g of raw) {
         if (this.leagueIds.length && !this.leagueIds.includes(String(g.league.id))) continue;
         out.push(mapBasketballGame(g));

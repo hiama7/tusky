@@ -158,7 +158,7 @@ export class FootballAdapter implements SportAdapter {
     const out: NormalizedFixture[] = [];
     for (const date of dates) {
       // One request per day returns every fixture worldwide (timezone UTC).
-      const raw = await this.client.get<RawFootballFixture>("/fixtures", { date, timezone: "UTC" });
+      const raw = await this.client.getDate<RawFootballFixture>("/fixtures", date);
       for (const f of raw) {
         if (this.leagueIds.length && !this.leagueIds.includes(String(f.league.id))) continue;
         out.push(mapFootballFixture(f));

@@ -113,6 +113,23 @@ export class ApiSportsClient {
     return out;
   }
 
+  /**
+   * GET one date's fixtures. A date the subscription can't access (the free plan only
+   * allows yesterday..tomorrow UTC) is skipped with a warning instead of failing the whole
+   * sync, so the dates that are allowed still get stored.
+   */
+  async getDate<T>(path: string, date: string): Promise<T[]> {
+    try {
+      return await this.get<T>(path, { date, timezone: "UTC" });
+    } catch (err) {
+      if (err instanceof ApiSportsError && !err.retryable) {
+        log.warn({ sport: this.sport, path, date, err: err.message }, "date not available on this plan; skipped");
+        return [];
+      }
+      throw err;
+    }
+  }
+
   private request<T>(path: string, params: Record<string, string | number>): Promise<ApiSportsEnvelope<T>> {
     const run = this.chain.then(() => this.doRequest<T>(path, params));
     // Keep the chain alive even if this call fails.

@@ -8,6 +8,7 @@ import json
 import pandas as pd
 import psycopg
 
+from .exhibitions import exhibition_mask
 from .features import MATCH_COLUMNS
 
 
@@ -23,19 +24,25 @@ def sport_id(conn: psycopg.Connection, sport: str) -> int:
 
 
 def load_matches(conn: psycopg.Connection, sport: str) -> pd.DataFrame:
-    """Every non-cancelled match of a sport. Scores are null until the result is known."""
+    """Every non-cancelled competitive match of a sport (preseason and exhibition games are
+    dropped, see exhibitions.py). Scores are null until the result is known."""
     rows = conn.execute(
         """
         select m.id, m.start_time, m.competition_id, m.home_team_id, m.away_team_id,
-               m.home_score, m.away_score, m.status::text
+               m.home_score, m.away_score, m.status::text, c.external_id
         from matches m
         join sports s on s.id = m.sport_id
+        left join competitions c on c.id = m.competition_id
         where s.code = %s and m.status <> 'cancelled'
         order by m.start_time, m.id
         """,
         (sport,),
     ).fetchall()
-    return pd.DataFrame(rows, columns=MATCH_COLUMNS)
+    df = pd.DataFrame(rows, columns=[*MATCH_COLUMNS, "league_id"])
+    if df.empty:
+        return df[MATCH_COLUMNS]
+    keep = ~exhibition_mask(sport, df, df["league_id"])
+    return df.loc[keep, MATCH_COLUMNS].reset_index(drop=True)
 
 
 def team_names(conn: psycopg.Connection, team_ids: list[int]) -> dict[int, str]:

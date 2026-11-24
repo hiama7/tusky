@@ -184,6 +184,18 @@ npm run typecheck && npm test       # must stay green
 
 Useful SQL: `select name, state, count(*) from pgboss.job group by 1,2;` and `select * from scrape_runs order by id desc limit 20;`
 
+## 9a0. Football and basketball on real data (2026-11-24)
+
+- **The API-Sports free plan allows seasons 2022–2024 only**, for both football and basketball. 2021, 2025 and 2025-26 return a "plan" error, which the backfill skips. Today's date-based fixtures *are* accessible: `/fixtures?date=` returned 2026/27 Champions League games.
+- **Stored data:** 6 football leagues × 2022–2024 (EPL, La Liga, Serie A: 380 per season; Bundesliga and Ligue 1: 306 plus 2 relegation play-off games; UCL including qualifying) and NBA 2022-23 to 2024-25. Everything has scores. Backfilling cost 31 football and 5 basketball requests.
+- **NBA preseason and All-Star games** aren't flagged by API-Basketball. `ml-service/tusky_ml/exhibitions.py` drops them in `db.load_matches` using regular-season opening dates (`SEASON_OPENERS`, which needs a new line each season) and sides with fewer than 10 games. That removes 204 of 4,150 games.
+- **Results** (rolling backtest on the newest half, ensemble selected for both sports):
+  - Football: RPS 0.2002 vs base rates 0.2336 (14.3% better), log-loss 0.982, accuracy 52.9%, good calibration. Per competition: EPL 0.1945 (17% better), La Liga 15%, Serie A 16%, Bundesliga 13%, Ligue 1 11.5%, UCL 9.8%.
+  - NBA: log-loss 0.611 vs 0.693, accuracy 66.1%, margin MAE 11.2 points, good calibration.
+- **The free plan's date window is only yesterday through tomorrow (UTC)**, for both APIs. This was tested on 2026-11-24: `/fixtures?date=2025-12-06` and `/games?date=2025-12-06` returned `{"plan":"Free plans do not have access to this date, try from 2026-11-23 to 2026-11-25."}`. Backfilling 2025+ by date is impossible on the free plan.
+- **Fixed 2026-11-24:** both adapters' `fetchUpcoming` go through `ApiSportsClient.getDate`, which skips a plan-refused date with a warning instead of failing the whole sync (tests in `packages/providers/test/planDates.test.ts`, using the verbatim error body). Checked against the real API: the results sync skipped 2026-11-22 and stored 2026-11-23. On the free plan the scheduler still only sees yesterday through tomorrow, so `FIXTURE_DAYS_AHEAD` and `RESULTS_DAYS_BACK` above 1 just spend a request on a refused date.
+- **Open issue: stale ratings.** History ends in mid-2025, so current-season predictions would lean on ratings that are over a year old. Options: backfill by date (1 request per day, if past dates are allowed on the free plan), a paid plan, or let the daily results sync catch up over time.
+
 ## 9a. Cricket data
 
 - **Identity:** teams use `provider='cricket'`, `external_id='<m|f>:<normalized name>'`, from `cricketTeamKey` (TS) and `team_key` (Python). Both must give the same result; a parity test exists in each language. Franchise renames live in `KNOWN_ALIASES` / `CRICKET_KNOWN_ALIASES`, and an alias row is written only when a match uses the old name. Players use `provider='cricsheet'` with the people-register ID. Venues use the Cricsheet venue-register ID (format 1.3), or `name:<normalized>` when there is none.
