@@ -241,6 +241,32 @@ def cmd_tune(args, settings) -> int:
     return 0
 
 
+def cmd_thesportsdb(args, settings) -> int:
+    from .config import REPO_ROOT
+    from .ingest import thesportsdb as tsdb
+
+    only = [x.strip() for x in args.leagues.split(",") if x.strip()] or None
+    with db.connect(settings.database_url) as conn:
+        try:
+            rep = tsdb.fill(conn, REPO_ROOT / "data" / "thesportsdb", refresh=args.refresh, only=only)
+        except tsdb.RateLimited:
+            print("! thesportsdb rate-limited the shared free key; everything fetched so far is cached. Re-run in a few minutes.", file=sys.stderr)
+            return 2
+    print(f"thesportsdb: {rep.events} events read, {rep.filled} missing results filled")
+    for lg, c in sorted(rep.per_league.items()):
+        print(f"  {lg}: " + ", ".join(f"{k} {v}" for k, v in sorted(c.items())))
+    if rep.compared:
+        print(f"  validation against scores already stored: {rep.compared} compared, {100 * rep.same_score / rep.compared:.2f}% identical")
+    for m in rep.mismatches[:10]:
+        print(f"    differs: {m}")
+    if rep.unmatched_teams:
+        print("  team names not matched (add to TSDB_OVERRIDES): " + "; ".join(sorted(rep.unmatched_teams)))
+    if rep.no_fixture:
+        print(f"  {len(rep.no_fixture)} finished events had no stored fixture, e.g. " + "; ".join(rep.no_fixture[:5]))
+    print("Data: TheSportsDB (thesportsdb.com), free development key.")
+    return 0
+
+
 def cmd_openfootball(args, settings) -> int:
     from .config import REPO_ROOT
     from .ingest import openfootball as of
@@ -402,6 +428,10 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--seed", type=int, default=7)
     sp.add_argument("--no-save", action="store_true")
 
+    sp = sub.add_parser("thesportsdb", help="fill results openfootball lacks (slow, cached, uses a shared free key)")
+    sp.add_argument("--leagues", default="", help="en.1,es.1,... (default: every league with missing results)")
+    sp.add_argument("--refresh", action="store_true", help="ignore the cache and fetch again")
+
     sp = sub.add_parser("openfootball", help="import league results/fixtures from openfootball (CC0)")
     sp.add_argument("--seasons", default="2022-23,2023-24,2024-25,2025-26,2026-27", help="comma list, e.g. 2025-26,2026-27")
     sp.add_argument("--leagues", default="", help="en.1,es.1,it.1,de.1,fr.1 (default: all)")
@@ -428,6 +458,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_cricsheet(args, load_settings())
     if args.cmd == "tune":
         return cmd_tune(args, load_settings())
+    if args.cmd == "thesportsdb":
+        return cmd_thesportsdb(args, load_settings())
     if args.cmd == "openfootball":
         return cmd_openfootball(args, load_settings())
     if args.cmd == "cricket-train":

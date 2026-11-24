@@ -21,6 +21,7 @@
     "history:backfill": "npm run history:backfill -w @tusky/scheduler --",
     "cricket:import": "node ml-service/run.mjs cricsheet",
     "football:import": "node ml-service/run.mjs openfootball",
+    "football:fill": "node ml-service/run.mjs thesportsdb",
     "cricket:train": "node ml-service/run.mjs cricket-train",
     "cricket:evaluate": "node ml-service/run.mjs cricket-evaluate",
     "cricket:predict": "node ml-service/run.mjs cricket-predict",
