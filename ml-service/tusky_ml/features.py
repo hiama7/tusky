@@ -55,6 +55,8 @@ class SportConfig:
     """Early games use a larger step, c / (games + c), so new teams converge quickly."""
     sample_half_life_days: float | None = None
     """When set, training down-weights older matches: weight halves every N days."""
+    ensemble_weight: float = 0.5
+    """Share of the first (linear/GLM) model in the ensemble; the gradient-boosted model gets the rest."""
 
 
 FOOTBALL = SportConfig(
@@ -151,7 +153,7 @@ def _elo_multiplier(cfg: SportConfig, margin: float, winner_elo_edge: float) -> 
 
 
 class _Team:
-    __slots__ = ("elo", "att", "deff", "home_att", "home_def", "away_att", "away_def", "off", "dfn", "n", "last")
+    __slots__ = ("elo", "att", "deff", "home_att", "home_def", "away_att", "away_def", "off", "dfn", "n", "last", "regressed_for")
 
     def __init__(self, mean_h: float, mean_a: float):
         mid = (mean_h + mean_a) / 2
@@ -167,6 +169,8 @@ class _Team:
         self.dfn = 0.0
         self.n = 0
         self.last: pd.Timestamp | None = None
+        # The `last` value for which the long-break shrink was already applied (once per break).
+        self.regressed_for: pd.Timestamp | None = None
 
 
 def _rating_rates(cfg: SportConfig, comp: list[float], h: _Team, a: _Team) -> tuple[float, float]:
@@ -193,6 +197,7 @@ def build_features(matches: pd.DataFrame, cfg: SportConfig) -> pd.DataFrame:
     comp_ids = df["competition_id"].to_numpy()
     hs_arr = df["home_score"].to_numpy()
     as_arr = df["away_score"].to_numpy()
+    status_arr = df["status"].to_numpy()
 
     for i in range(n):
         t = pd.Timestamp(starts[i])
@@ -213,7 +218,10 @@ def build_features(matches: pd.DataFrame, cfg: SportConfig) -> pd.DataFrame:
                 rests.append(cfg.rest_cap_days)
                 continue
             gap_days = (t - team.last).total_seconds() / 86400.0
-            if gap_days > cfg.offseason_days:
+            # Shrink toward the mean once per long break. Without the guard every further
+            # unplayed (upcoming) match of the same team would shrink the ratings again.
+            if gap_days > cfg.offseason_days and team.regressed_for != team.last:
+                team.regressed_for = team.last
                 r = cfg.offseason_regress
                 team.elo += (ELO_START - team.elo) * r
                 mid = (comp[0] + comp[1]) / 2
@@ -250,6 +258,11 @@ def build_features(matches: pd.DataFrame, cfg: SportConfig) -> pd.DataFrame:
 
         hs, as_ = hs_arr[i], as_arr[i]
         if math.isnan(hs) or math.isnan(as_):
+            if status_arr[i] == "completed":
+                # Played, but the source has no result: the clock advances (rest days, break
+                # detection), ratings and form stay untouched because the outcome is unknown.
+                h.last = t
+                a.last = t
             continue
         played[i] = True
 

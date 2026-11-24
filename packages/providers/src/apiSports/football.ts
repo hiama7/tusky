@@ -148,6 +148,8 @@ export class FootballAdapter implements SportAdapter {
   readonly sport = "football" as const;
   readonly provider = API_SPORTS_PROVIDER;
   readonly matchDurationMinutes = 135;
+  /** A league pairing (home, away) happens once per season, so a rescheduled game is still the same fixture. */
+  readonly sameFixtureWindowHours = 24 * 60;
 
   constructor(
     private readonly client = new ApiSportsClient("football"),

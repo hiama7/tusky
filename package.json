@@ -20,6 +20,7 @@
     "player:import": "npm run player:import -w @tusky/scrapper-service --",
     "history:backfill": "npm run history:backfill -w @tusky/scheduler --",
     "cricket:import": "node ml-service/run.mjs cricsheet",
+    "football:import": "node ml-service/run.mjs openfootball",
     "cricket:train": "node ml-service/run.mjs cricket-train",
     "cricket:evaluate": "node ml-service/run.mjs cricket-evaluate",
     "cricket:predict": "node ml-service/run.mjs cricket-predict",

@@ -51,6 +51,8 @@ How the languages split. **TypeScript** handles API ingestion and the job queue,
 | Data | Source | Cost / licence | Used for |
 |---|---|---|---|
 | Football and basketball fixtures, results, squads, player season stats, injuries | API-Sports | Free: 100 req/day per sport. Paid plans for more | **[done]** fixtures/results/squads; injuries **[planned]** |
+| Football results and schedules after the free-plan limit (2025-26 onward) | openfootball (`football.json`) | CC0, public domain | **[done]** `npm run football:import`; results only (no shots or odds), and the source lags the real season by weeks |
+| ~~football-data.co.uk CSVs~~ | not used | private individuals only, no commercial or data-training products | rejected: conflicts with the project's licensing rule |
 | Cricket history, ball by ball (T20I, ODI, Test, IPL, BBL, PSL, CPL…) | [Cricsheet](https://cricsheet.org) | Free, open data (ODC-BY: attribution required) | training: results, innings, phases, venues, toss, player ratings, live-engine states |
 | Cricket fixtures, live scores, squads, toss | CricketData.org (cricapi) | Free tier is about 100 hits/day, paid above that | upcoming matches, toss, playing XI, live polling |
 | Weather (forecast and historical) | Open-Meteo forecast and archive (ERA5) | Free and keyless for **non-commercial** use; commercial needs their paid plan | match-time temperature, humidity, dew point, wind, rain, cloud. The archive gives training rows the weather that actually occurred |

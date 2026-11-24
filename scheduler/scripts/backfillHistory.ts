@@ -52,7 +52,7 @@ outer: for (const league of leagues) {
       const fixtures = await adapter.fetchSeasonResults(league, season);
       let withScore = 0;
       for (const f of fixtures) {
-        await storeFixture(sportId, adapter.provider, f);
+        await storeFixture(sportId, adapter.provider, f, { sameFixtureWindowHours: adapter.sameFixtureWindowHours });
         if (f.score.home != null && f.score.away != null) withScore++;
       }
       total += fixtures.length;

@@ -184,6 +184,19 @@ npm run typecheck && npm test       # must stay green
 
 Useful SQL: `select name, state, count(*) from pgboss.job group by 1,2;` and `select * from scrape_runs order by id desc limit 20;`
 
+## 9a00. Football 2025–26 data, tuning and report (2026-11-24)
+
+Full results: [docs/reports/football-2026-11.md](docs/reports/football-2026-11.md).
+
+- **Source decision:** football results after 2024 come from **openfootball (CC0)**, imported by `ml-service/tusky_ml/ingest/openfootball.py` (`npm run football:import`). **football-data.co.uk was rejected**: its data page limits use to private individuals and excludes commercial and data-training products. Its 25 CSVs sit unused in `data/football-data/` (git-ignored) because the user asked to keep them. Do not use them for training or validation unless the user confirms the project stays non-commercial. The earlier plan claimed the opposite; that was an unchecked assumption.
+- **What's stored:** 2025-26 (1,751 of 1,752 scored) and 2026-27 (253 scored, 296 played with no score in the source (`provider_status NR`), 1,203 upcoming). **The source has no scores for 9 Oct to 22 Nov 2026**; ratings for the five leagues are about two months old until that is filled (a free football-data.org key is untested, or a paid API-Sports plan). No Champions League after 2024-25.
+- **Team identity:** `team_aliases` rows `of:<league>:<normalized name>` record every openfootball name decision. `OVERRIDES` (in the importer) holds reviewed same-club mappings (Troyes, Elversberg). Never add an automatic fuzzy rule: it would merge Paris FC into PSG. The name normalizer exists in both Python (`normalize_team`) and TS (`normalizeTeamName`) with a parity test.
+- **Fixture dedupe:** `findExistingMatch` (db repo) and `Importer._existing` (Python) attach a provider's fixture to an existing row. Football uses `sameFixtureWindowHours = 24 * 60` within the same competition because a league pairing happens once per season; other sports use 36 h. `storeFixture` takes the adapter's window.
+- **Feature fixes** (`ml-service/tusky_ml/features.py`): the long-break shrink applies once per break (`regressed_for`), and a completed match with no score advances `last` without touching ratings. Without these, the data gap above flattened every upcoming prediction.
+- **Tuning** (`ml-service/tusky_ml/tune.py`, CLI `tune`): random search over `SportConfig` before a cutoff, ensemble weight search, a one-shot holdout, a "frozen ratings" counterfactual, paired bootstrap intervals. Tuned settings are saved to `artifacts/<sport>/config.json` and applied by `train`; a trained model carries its own `cfg`, so `predict` uses the settings it was trained with. `SportConfig.ensemble_weight` is the GLM share in the ensemble. Only football has a search space.
+- **Result:** holdout (1,968 matches, Aug 2025 to 23 Nov 2026) RPS 0.2038 vs 0.2299 for base rates (11.4% better), accuracy 51.4%; tuning added +0.0012 RPS (95% interval +0.0003 to +0.0022), the new data +0.0045. There is no bookmaker benchmark.
+- **Open:** the model underrates strong home favourites (74% calls come true 83% of the time); a calibration correction should be tested out of sample before adopting. A stored Union Berlin result (14 Dec 2024) disagrees between sources; API-Sports is kept.
+
 ## 9a0. Football and basketball on real data (2026-11-24)
 
 - **The API-Sports free plan allows seasons 2022–2024 only**, for both football and basketball. 2021, 2025 and 2025-26 return a "plan" error, which the backfill skips. Today's date-based fixtures *are* accessible: `/fixtures?date=` returned 2026/27 Champions League games.

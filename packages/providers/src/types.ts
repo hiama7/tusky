@@ -70,6 +70,14 @@ export interface SportAdapter {
   /** Typical match length incl. breaks, used to auto-complete matches with no live feed. */
   readonly matchDurationMinutes: number;
 
+  /**
+   * How far apart (hours) two sources' kick-off times may be for the same two sides to count as
+   * the same fixture. Leagues where each home/away pairing happens once per season can use a long
+   * window (postponed games move by days); sports where a pairing recurs within weeks must not.
+   * Default 36.
+   */
+  readonly sameFixtureWindowHours?: number;
+
   /** Per-format length (cricket: T20 vs Test). Falls back to matchDurationMinutes. */
   durationMinutes?(format: string | null): number;
 

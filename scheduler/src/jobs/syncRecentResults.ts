@@ -26,7 +26,7 @@ export async function syncRecentResults(): Promise<void> {
       const sportId = await getSportId(adapter.sport);
       let withScore = 0;
       for (const f of fixtures) {
-        await storeFixture(sportId, adapter.provider, f);
+        await storeFixture(sportId, adapter.provider, f, { sameFixtureWindowHours: adapter.sameFixtureWindowHours });
         if (f.score.home != null) withScore++;
       }
       log.info({ sport: adapter.sport, dates, fixtures: fixtures.length, withScore }, "recent results synced");

@@ -298,6 +298,11 @@ class EnsemblePredictor:
     sport: str
     kind: str = "ensemble"
     members: list = field(default_factory=list)
+    weight: float = 0.5
+    """Share of the first member (glm/linear); the second gets 1 - weight."""
+
+    def _mix(self, items):
+        return np.tensordot(np.array([self.weight, 1.0 - self.weight]), np.asarray(items), axes=1)
 
     def fit(self, wide: pd.DataFrame) -> "EnsemblePredictor":
         base = FOOTBALL_KINDS[:2] if self.sport == "football" else BASKETBALL_KINDS[:2]
@@ -308,15 +313,15 @@ class EnsemblePredictor:
         if self.sport == "football":
             rates = [m.rates(wide) for m in self.members]
             grids = [score_grid(lh, la, m.rho, m.cfg.max_score) for m, (lh, la) in zip(self.members, rates)]
-            lh = np.mean([r[0] for r in rates], axis=0)
-            la = np.mean([r[1] for r in rates], axis=0)
-            return football_frame(np.mean(grids, axis=0), lh, la, wide.index)
+            lh = self._mix([r[0] for r in rates])
+            la = self._mix([r[1] for r in rates])
+            return football_frame(self._mix(grids), lh, la, wide.index)
         preds = [m.predict(wide) for m in self.members]
-        p_home = np.mean([p["p_home"].to_numpy() for p in preds], axis=0)
-        mh = np.mean([p["exp_home"].to_numpy() for p in preds], axis=0)
-        ma = np.mean([p["exp_away"].to_numpy() for p in preds], axis=0)
-        sm = float(np.mean([m.sigma_margin for m in self.members]))
-        st = float(np.mean([m.sigma_total for m in self.members]))
+        p_home = self._mix([p["p_home"].to_numpy() for p in preds])
+        mh = self._mix([p["exp_home"].to_numpy() for p in preds])
+        ma = self._mix([p["exp_away"].to_numpy() for p in preds])
+        sm = float(self._mix([m.sigma_margin for m in self.members]))
+        st = float(self._mix([m.sigma_total for m in self.members]))
         return basketball_frame(p_home, mh, ma, sm, st, wide.index)
 
     def describe(self) -> dict:
@@ -325,7 +330,7 @@ class EnsemblePredictor:
 
 def make_predictor(sport: str, kind: str):
     if kind == "ensemble":
-        return EnsemblePredictor(sport=sport)
+        return EnsemblePredictor(sport=sport, weight=CONFIGS[sport].ensemble_weight)
     if sport == "football":
         return FootballPredictor(kind=kind)
     if sport == "basketball":

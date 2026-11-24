@@ -28,6 +28,8 @@ class TrainedModel:
     version: str
     predictor: object
     report: dict
+    cfg: object | None = None
+    """The SportConfig the model was trained with; predictions replay features with the same one."""
 
 
 def _baseline_probs(train: pd.DataFrame, n: int) -> np.ndarray:
@@ -143,7 +145,7 @@ def train(
     report.update(final.describe())
     if three_way:
         report["calibration_draw"] = calibration(oof["p_draw"].to_numpy(), (hs_va == as_va).astype(float))
-    return TrainedModel(sport=sport, kind=best, version=version, predictor=final, report=report)
+    return TrainedModel(sport=sport, kind=best, version=version, predictor=final, report=report, cfg=cfg)
 
 
 # ---- artifacts -----------------------------------------------------------------
@@ -182,7 +184,7 @@ def predict(
     now: datetime | None = None,
 ) -> pd.DataFrame:
     """Predict upcoming scheduled matches (or the given ids). Features use all history."""
-    cfg = CONFIGS[model.sport]
+    cfg = getattr(model, "cfg", None) or CONFIGS[model.sport]
     wide = build_features(matches, cfg)
     if match_ids:
         target = wide[wide["match_id"].isin(match_ids)]

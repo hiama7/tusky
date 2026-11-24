@@ -22,7 +22,7 @@ async function runForAdapter(adapter: SportAdapter) {
   let inserted = 0;
   const matchIds: number[] = [];
   for (const f of fixtures) {
-    const { id, inserted: isNew } = await storeFixture(sportId, adapter.provider, f);
+    const { id, inserted: isNew } = await storeFixture(sportId, adapter.provider, f, { sameFixtureWindowHours: adapter.sameFixtureWindowHours });
     matchIds.push(id);
     if (isNew) inserted++;
   }

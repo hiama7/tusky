@@ -57,6 +57,23 @@ npm run player:import -- ./data/sample-players.json              # manual player
 
 Manual imports (`source = manual`) mark the player `ready`, so the scraper skips them until `HISTORY_STALE_DAYS` has passed.
 
+## Football results beyond the free API plan (openfootball)
+
+The free API-Sports plan only allows the 2022 to 2024 seasons, so newer football results come from [openfootball](https://github.com/openfootball/football.json), which is released under CC0 (public domain). It has results and schedules only, no shots or odds.
+
+```bash
+npm run football:import                                  # downloads data/openfootball/<season>/<league>.json and imports all five seasons
+npm run football:import -- --seasons 2026-27 --refresh  # just refresh the current season (the source updates daily)
+node ml-service/run.mjs tune --sport football --trials 150 --seed 7   # tune the settings before 2025-07-01, score a one-shot holdout after it
+npm run ml:train -- --sport football                     # retrains with the saved tuned settings (ml-service/artifacts/football/config.json)
+```
+
+- Team names are matched to the existing API-Sports teams by comparing dates and scores in the seasons both sources cover. Genuinely new clubs are created. Names that look like an existing club but couldn't be matched are printed as `CHECK possible duplicates`; add a line to `OVERRIDES` in `ml-service/tusky_ml/ingest/openfootball.py` if it is the same club.
+- Matches that were played but have no score in the source yet are stored as completed with `provider_status = 'NR'` and null scores. The feature replay uses them as rest days but never as results, and a later import fills in the score.
+- A fixture that is already stored by another source (same two clubs, same competition, within 60 days) is never duplicated; the daily scheduler follows the same rule.
+- The results of the last full run are in [docs/reports/football-2026-11.md](docs/reports/football-2026-11.md).
+- football-data.co.uk offers CSVs with shots and odds, but its terms limit use to private individuals and exclude commercial and data-training products, so this project does not use it.
+
 ## Cricket data
 
 History comes from [Cricsheet](https://cricsheet.org): free ball-by-ball data under the Open Data Commons Attribution licence, so the app must credit Cricsheet. Upcoming fixtures, toss and live state come from CricketData.org.

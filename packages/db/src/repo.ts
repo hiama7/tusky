@@ -1,5 +1,5 @@
-import { and, eq, sql } from "drizzle-orm";
-import type { PlayerHistory } from "@tusky/shared";
+import { and, eq, gte, lte, ne, sql } from "drizzle-orm";
+import { normalizeTeamName, type PlayerHistory } from "@tusky/shared";
 import { db, type Db, type Tx } from "./client.ts";
 import {
   competitions,
@@ -10,6 +10,7 @@ import {
   playerStats,
   scrapeRuns,
   sports,
+  matchAliases,
   teamAliases,
   teams,
 } from "./schema/index.ts";
@@ -77,6 +78,34 @@ export async function resolveTeamAlias(sportId: number, alias: string, conn: Con
     .from(teamAliases)
     .where(and(eq(teamAliases.sportId, sportId), eq(teamAliases.alias, alias)));
   return row?.teamId ?? null;
+}
+
+/**
+ * Resolve a provider's team to our team row: a registered alias first, then the provider's own
+ * id. With `matchByName`, a team we have never seen under this provider is matched to an
+ * existing team whose normalized name is identical (same club from another source), and the
+ * provider id is recorded as an alias so later syncs resolve instantly. Exact normalized
+ * equality only: fuzzier rules would merge different clubs (Paris FC vs Paris Saint Germain).
+ */
+export async function resolveTeam(input: TeamInput, conn: Conn = db, opts: { matchByName?: boolean } = {}): Promise<number> {
+  const aliased = await resolveTeamAlias(input.sportId, input.externalId, conn);
+  if (aliased) return aliased;
+  if (opts.matchByName) {
+    const [own] = await conn
+      .select({ id: teams.id })
+      .from(teams)
+      .where(and(eq(teams.sportId, input.sportId), eq(teams.provider, input.provider), eq(teams.externalId, input.externalId)));
+    if (!own) {
+      const norm = normalizeTeamName(input.name);
+      const rows = await conn.select({ id: teams.id, name: teams.name }).from(teams).where(eq(teams.sportId, input.sportId));
+      const same = norm ? rows.filter((r) => normalizeTeamName(r.name) === norm) : [];
+      if (same.length === 1) {
+        await conn.insert(teamAliases).values({ sportId: input.sportId, alias: input.externalId, teamId: same[0]!.id }).onConflictDoNothing();
+        return same[0]!.id;
+      }
+    }
+  }
+  return upsertTeam(input, conn);
 }
 
 export interface PlayerInput {
@@ -166,6 +195,55 @@ export async function upsertMatch(input: MatchInput, conn: Conn = db): Promise<{
     // xmax = 0 only for freshly inserted rows.
     .returning({ id: matches.id, inserted: sql<boolean>`(xmax = 0)` });
   return { id: row!.id, inserted: row!.inserted };
+}
+
+export const DEFAULT_SAME_FIXTURE_HOURS = 36;
+
+/**
+ * If this provider fixture is already stored under another provider's row (same two teams, kick-off
+ * within 36 hours), returns that row's key so `upsertMatch` updates it instead of inserting a
+ * duplicate, and remembers the pairing in match_aliases. Returns null for a fixture we already
+ * hold under its own key, or one that is genuinely new.
+ */
+export async function findExistingMatch(
+  input: { sportId: number; provider: string; externalId: string; homeTeamId: number; awayTeamId: number; startTime: Date },
+  conn: Conn = db,
+  /** `windowHours`: allowed kick-off difference. `competitionId`: when given, the rows must share it (use with long windows). */
+  opts: { windowHours?: number; competitionId?: number | null } = {},
+): Promise<{ provider: string; externalId: string } | null> {
+  const windowMs = (opts.windowHours ?? DEFAULT_SAME_FIXTURE_HOURS) * 3_600_000;
+  const [aliased] = await conn
+    .select({ provider: matches.provider, externalId: matches.externalId })
+    .from(matchAliases)
+    .innerJoin(matches, eq(matches.id, matchAliases.matchId))
+    .where(and(eq(matchAliases.provider, input.provider), eq(matchAliases.externalId, input.externalId)));
+  if (aliased) return aliased;
+
+  const [own] = await conn
+    .select({ id: matches.id })
+    .from(matches)
+    .where(and(eq(matches.sportId, input.sportId), eq(matches.provider, input.provider), eq(matches.externalId, input.externalId)));
+  if (own) return null;
+
+  const [other] = await conn
+    .select({ id: matches.id, provider: matches.provider, externalId: matches.externalId })
+    .from(matches)
+    .where(
+      and(
+        eq(matches.sportId, input.sportId),
+        ne(matches.provider, input.provider),
+        eq(matches.homeTeamId, input.homeTeamId),
+        eq(matches.awayTeamId, input.awayTeamId),
+        gte(matches.startTime, new Date(input.startTime.getTime() - windowMs)),
+        lte(matches.startTime, new Date(input.startTime.getTime() + windowMs)),
+        ...(opts.competitionId != null ? [eq(matches.competitionId, opts.competitionId)] : []),
+      ),
+    )
+    .orderBy(sql`abs(extract(epoch from ${matches.startTime} - ${input.startTime.toISOString()}::timestamptz))`)
+    .limit(1);
+  if (!other) return null;
+  await conn.insert(matchAliases).values({ matchId: other.id, provider: input.provider, externalId: input.externalId }).onConflictDoNothing();
+  return { provider: other.provider, externalId: other.externalId };
 }
 
 export async function upsertMatchPlayer(

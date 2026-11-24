@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
-from . import db, pipeline, synthetic
+from . import db, pipeline, synthetic, tune
 from .config import SPORTS, load_settings
 
 log = logging.getLogger("tusky_ml")
@@ -85,6 +85,9 @@ def cmd_train(args, settings, save: bool = True) -> int:
     with db.connect(settings.database_url) as conn:
         for sport in _sports(args.sport, settings):
             matches = db.load_matches(conn, sport)
+            applied = tune.apply_saved(settings.artifacts_dir, sport)
+            if applied:
+                print(f"  using tuned settings from artifacts/{sport}/config.json")
             try:
                 model = pipeline.train(sport, matches, kind=args.kind, min_matches=args.min_matches or settings.min_train_matches)
             except pipeline.NotEnoughData as e:
@@ -128,6 +131,7 @@ def cmd_run(args, settings) -> int:
                 with db.connect(settings.database_url) as conn:
                     matches = db.load_matches(conn, sport)
                     if stale:
+                        tune.apply_saved(settings.artifacts_dir, sport)
                         try:
                             model = pipeline.train(sport, matches, min_matches=settings.min_train_matches)
                             pipeline.save(model, settings.artifacts_dir)
@@ -182,6 +186,101 @@ def cmd_cricsheet(args, settings) -> int:
     print(f"cricsheet {path.name}: {counts} in {time.time() - started:.0f}s")
     print("Data: Cricsheet (cricsheet.org), Open Data Commons Attribution License.")
     return 1 if counts["failed"] and not counts["imported"] else 0
+
+
+def print_tuning(res: dict) -> None:
+    key = res["holdout"]["metric"]
+    ho = res["holdout"]
+    s = res["search"]
+    print()
+    print(f"{res['sport']} tuning ({res['trials']} random trials, seed {res['seed']}), searched only on matches before {res['cutoff']}")
+    print(f"  rolling backtest {key}: default {s['default_score']:.5f} -> best {s['best_score']:.5f}")
+    print("  settings changed: " + (", ".join(f"{k} {res['default_params'][k]} -> {v}" for k, v in s["best_params"].items()) or "none (defaults were best)"))
+    w = res["ensemble_weight"]
+    print(f"  ensemble weight on the GLM (rest on gradient boosting): {w['best_weight']}  "
+          + " ".join(f"{k}:{v:.4f}" for k, v in w["table"].items() if k in ("0.0", "0.5", "1.0")))
+    print()
+    print(f"  HOLDOUT (never seen by the search): {ho['n_holdout']} matches, {ho['holdout_from'][:10]} to {ho['holdout_to'][:10]}, fitted once on {ho['n_pre']} earlier matches")
+    print(f"  {'model':<34} {'rps':>8} {'log_loss':>9} {'brier':>8} {'acc':>7}")
+    labels = {"base_rates": "base rates (no skill)", "default_frozen": "default, ratings frozen at cutoff",
+              "tuned_frozen": "tuned, ratings frozen at cutoff", "default": "default settings", "tuned": "tuned settings"}
+    for k in ("base_rates", "default_frozen", "tuned_frozen", "default", "tuned"):
+        m = ho["scores"][k]
+        print(f"  {labels[k]:<34} {m['rps']:>8.4f} {m['log_loss']:>9.4f} {m['brier']:>8.4f} {m['accuracy']:>7.3f}")
+    names = {"tuned_vs_default": "tuned vs default", "new_data_vs_frozen_default": "new results vs frozen (default)",
+             "new_data_vs_frozen_tuned": "new results vs frozen (tuned)", "default_vs_base_rates": "default vs base rates",
+             "tuned_vs_base_rates": "tuned vs base rates"}
+    print("  paired RPS improvement (positive = better), bootstrap 95% interval:")
+    for k, v in ho["paired_gain"].items():
+        print(f"    {names[k]:<34} {v['mean_rps_gain']:+.5f}  [{v['ci95'][0]:+.5f}, {v['ci95'][1]:+.5f}]")
+    print("  by segment (rps):  " + f"{'n':>5} {'base':>8} {'default':>8} {'tuned':>8} {'frozen':>8}")
+    for label, m in ho["segments"].items():
+        print(f"    {label:<28}{m['n']:>5} {m['base_rates']:>8.4f} {m['default']:>8.4f} {m['tuned']:>8.4f} {m['tuned_frozen']:>8.4f}")
+    print("  calibration, home win (tuned): " + ", ".join(f"{c['predicted']:.2f}->{c['observed']:.2f}" for c in ho["calibration_home_tuned"]))
+    print("  calibration, draw (tuned):     " + ", ".join(f"{c['predicted']:.2f}->{c['observed']:.2f}" for c in ho["calibration_draw_tuned"]))
+    print()
+    print(f"  decision: tuned settings {'ADOPTED' if res['adopted'] else 'NOT adopted (did not beat the defaults on the holdout)'}")
+
+
+def cmd_tune(args, settings) -> int:
+    from dataclasses import asdict
+
+    sport = args.sport
+    with db.connect(settings.database_url) as conn:
+        matches = db.load_matches(conn, sport)
+        names = {int(i): n for i, n in conn.execute("select id, name from competitions").fetchall()}
+    res = tune.run(sport, matches, args.cutoff, args.trials, args.seed, names, log=print)
+    print_tuning(res)
+    if not args.no_save:
+        out = settings.artifacts_dir / sport
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "tuning.json").write_text(json.dumps({**res, "tuned_config": asdict(res["tuned_config"])}, indent=2, default=str), encoding="utf-8")
+        print(f"  saved {out / 'tuning.json'}")
+        if res["adopted"]:
+            print(f"  saved {tune.save_config(settings.artifacts_dir, sport, res['tuned_config'], {'tuned_before': args.cutoff, 'seed': args.seed, 'trials': args.trials})}")
+    return 0
+
+
+def cmd_openfootball(args, settings) -> int:
+    from .config import REPO_ROOT
+    from .ingest import openfootball as of
+
+    seasons = [x.strip() for x in args.seasons.split(",") if x.strip()]
+    leagues = [x.strip() for x in args.leagues.split(",") if x.strip()] if args.leagues else list(of.LEAGUES)
+    root = REPO_ROOT / "data" / "openfootball"
+    files, failed = [], []
+    for season in seasons:
+        for league in leagues:
+            path = root / season / f"{league}.json"
+            try:
+                if args.refresh or not path.exists():
+                    path = of.download(season, league, root)
+                files.append((season, league, path))
+            except Exception as e:  # noqa: BLE001
+                failed.append(f"{season}/{league}: {e}")
+    for f in failed:
+        print(f"! {f}", file=sys.stderr)
+    with db.connect(settings.database_url) as conn:
+        res = of.import_files(conn, files)
+    print(f"openfootball: {len(files)} files imported, {len(failed)} could not be downloaded")
+    for key, c in sorted(res.seasons.items()):
+        print(f"  {key}: " + ", ".join(f"{k} {v}" for k, v in sorted(c.items())))
+    print("  team decisions: " + ", ".join(f"{k} {v}" for k, v in res.team_decisions.items()))
+    if res.new_teams:
+        print(f"  new teams created ({len(res.new_teams)}): " + "; ".join(res.new_teams))
+    if res.possible_duplicates:
+        print("  CHECK possible duplicates of existing teams (add an OVERRIDES line if they are the same club): "
+              + "; ".join(res.possible_duplicates))
+    if res.unresolved_ambiguous:
+        print("  ambiguous names: " + "; ".join(res.unresolved_ambiguous))
+    if res.overlap_pairs:
+        print(f"  overlap check vs API-Sports: {res.overlap_pairs} matches compared, "
+              f"{100 * res.overlap_same_score / res.overlap_pairs:.2f}% same score, "
+              f"{res.overlap_missing_in_db} in this source but not in the DB")
+        for m in res.mismatches[:10]:
+            print(f"    score mismatch: {m}")
+    print("Data: openfootball (github.com/openfootball), CC0 1.0 public domain.")
+    return 2 if failed and not files else 0
 
 
 def print_cricket_report(r: dict) -> None:
@@ -296,6 +395,18 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--sport", choices=[*SPORTS, "all"], default="all")
     sp.add_argument("--seeds", type=int, default=5)
 
+    sp = sub.add_parser("tune", help="tune a sport's settings before a cutoff, then score a one-shot holdout after it")
+    sp.add_argument("--sport", choices=["football"], default="football")
+    sp.add_argument("--trials", type=int, default=40)
+    sp.add_argument("--cutoff", default="2025-07-01", help="the search only sees matches before this date (UTC)")
+    sp.add_argument("--seed", type=int, default=7)
+    sp.add_argument("--no-save", action="store_true")
+
+    sp = sub.add_parser("openfootball", help="import league results/fixtures from openfootball (CC0)")
+    sp.add_argument("--seasons", default="2022-23,2023-24,2024-25,2025-26,2026-27", help="comma list, e.g. 2025-26,2026-27")
+    sp.add_argument("--leagues", default="", help="en.1,es.1,it.1,de.1,fr.1 (default: all)")
+    sp.add_argument("--refresh", action="store_true", help="re-download even if the file exists")
+
     sp = sub.add_parser("cricsheet", help="import Cricsheet ball-by-ball JSON (download a dataset or read local files)")
     src = sp.add_mutually_exclusive_group(required=True)
     src.add_argument("--dataset", help="download and import: ipl | t20s | odis | tests | it20s | recent | all")
@@ -315,6 +426,10 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
     if args.cmd == "cricsheet":
         return cmd_cricsheet(args, load_settings())
+    if args.cmd == "tune":
+        return cmd_tune(args, load_settings())
+    if args.cmd == "openfootball":
+        return cmd_openfootball(args, load_settings())
     if args.cmd == "cricket-train":
         return cmd_cricket_train(args, load_settings())
     if args.cmd == "cricket-evaluate":
