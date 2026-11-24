@@ -1,18 +1,8 @@
-import {
-  and,
-  db,
-  getSportId,
-  gt,
-  inArray,
-  matches,
-  matchPlayers,
-  sql,
-  upsertCompetition,
-  upsertMatch,
-  upsertTeam,
-} from "@tusky/db";
-import { enabledAdapters, QuotaExceededError, type NormalizedFixture, type SportAdapter } from "@tusky/providers";
+import { and, db, getSportId, gt, inArray, matches, matchPlayers, sql } from "@tusky/db";
+import { enabledAdapters, QuotaExceededError, type SportAdapter } from "@tusky/providers";
 import { childLogger, enqueue, env, QUEUES } from "@tusky/shared";
+
+import { storeFixture } from "../store.ts";
 
 const log = childLogger("fetch-upcoming");
 
@@ -21,31 +11,6 @@ export function upcomingDates(daysAhead: number, now = new Date()): string[] {
   return Array.from({ length: daysAhead + 1 }, (_, i) => {
     const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + i));
     return d.toISOString().slice(0, 10);
-  });
-}
-
-async function storeFixture(sportId: number, provider: string, f: NormalizedFixture) {
-  return db.transaction(async (tx) => {
-    const competitionId = await upsertCompetition({ sportId, provider, ...f.competition }, tx);
-    const homeTeamId = await upsertTeam({ sportId, provider, ...f.home }, tx);
-    const awayTeamId = await upsertTeam({ sportId, provider, ...f.away }, tx);
-    return upsertMatch(
-      {
-        sportId,
-        competitionId,
-        provider,
-        externalId: f.externalId,
-        homeTeamId,
-        awayTeamId,
-        startTime: f.startTime,
-        venue: f.venue,
-        city: f.city,
-        status: f.status,
-        providerStatus: f.providerStatus,
-        raw: f.raw,
-      },
-      tx,
-    );
   });
 }
 
@@ -64,7 +29,7 @@ async function runForAdapter(adapter: SportAdapter) {
 
   // Enqueue enrichment for upcoming matches that don't have their players yet.
   let enqueued = 0;
-  if (matchIds.length) {
+  if (matchIds.length && adapter.enrichPlayers !== false) {
     const pending = await db
       .select({ id: matches.id })
       .from(matches)

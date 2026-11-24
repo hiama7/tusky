@@ -2,7 +2,7 @@
 
 This file is the handoff for any agent continuing this project without prior context. Read it in full before changing anything. Update it when you finish a meaningful piece of work. The shorter [README.md](README.md) covers setup only.
 
-Last updated: 2026-11-21. At that point phase 1 (scheduler + scraper) was complete and all tests passed.
+Last updated: 2026-11-23. Phase 1 (scheduler + scraper) is complete, and phase 2 (the ML prediction service, `ml-service/`) is built and tested on synthetic data. All tests pass.
 
 ---
 
@@ -20,13 +20,21 @@ A SaaS that predicts match outcomes and scores across sports. The pipeline:
 |---|---|
 | Language | TypeScript everywhere (ESM) |
 | Frontend | React (**not started**, `frontend/` is empty) |
-| Backend API | Node + Express (**not started**, `backend/` is empty; the user said "API work later") |
+| Backend API | **FastAPI (Python)** in `backend/`, importing `tusky_ml` (changed from Express on 2026-11-23; not started) |
 | ORM / DB | Drizzle ORM + PostgreSQL **in Docker** |
 | Rate limiting | **Later** (meaning rate limiting on our own API; the provider quota guard already exists) |
 | Sports | **Multi-sport generic**: shared columns plus sport-specific `jsonb` checked by zod |
 | Fixtures/stats source | **API-Sports** (api-sports.io) |
 | Player history | **LangChain / LangGraph** with a cheap LLM, **plus manual JSON import** as an alternative |
 | LLM preference | **Gemini (preferred) → Groq (preferred) → Claude (use least, only as last resort)** |
+| Prediction model | **Python** service in `ml-service/` (scikit-learn), reads `matches`, writes `predictions` |
+| Model output | **Home/draw/away probabilities plus expected scores** (scorelines, over/under, etc.) |
+| Training data | **API-Sports past seasons** via `npm run history:backfill` (about 1 request per league-season) |
+| ML sports | **Football and basketball** |
+| Full platform plan | **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: the user's platform spec (cricket/football/basketball/tennis, model zoo, SHAP, live, dashboard). Follow its §10 build order |
+| Cricket data | **Cricsheet** (bulk ball-by-ball history, ODC-BY) plus the **CricketData.org free tier** (fixtures, toss, XI, live) |
+| Tennis | **Deferred.** Sackmann data is non-commercial; a licensed source is needed first |
+| Weather | **Open-Meteo** forecast and archive (free for non-commercial use; a paid plan is needed if commercial) |
 | Live events (toss, penalty…) | Design for them now, build later. The `match_events` table and a `match.live-poll` stub exist. |
 
 User preference: they like being asked short clarifying questions before big design choices, and they want a working pipeline before API or UI work.
@@ -42,9 +50,13 @@ User preference: they like being asked short clarifying questions before big des
 - Manual import CLI and a single-player debug CLI.
 - `npm run typecheck` is clean. `npm test` passes 34 tests in 5 files, including a real-DB integration test of the whole pipeline.
 
+- Phase 2 (ML): `matches.home_score/away_score`, a `predictions` table (migration 0001), `fetchSeasonResults` on both adapters, the `history:backfill` CLI, and a daily `syncRecentResults` scheduler job. `ml-service/` has leak-free features, a football Poisson model with Dixon-Coles, basketball points regression with normal margin/total distributions, and model selection plus a backtest report. `npm run ml:test` passes 15 tests, including a Postgres round trip on `tusky_test`.
+
+- Module 1 (cricket ingestion, 2026-11-24): migration 0002 adds `venues`, `team_aliases`/`player_aliases`/`match_aliases`, match cricket columns (format, toss, winner, result_type, venue_id, neutral_venue), and `cricket_innings`, `deliveries`, `match_lineups`, `ingest_files`. `ml-service/tusky_ml/ingest/cricsheet.py` handles the Cricsheet import (`npm run cricket:import`). `packages/providers/src/cricketData/adapter.ts` is the CricketData fixtures adapter, `packages/shared/src/cricket.ts` holds the team keys, `promoteLiveMatches` now uses per-format durations, and `storeFixture` resolves aliases. The real IPL, T20I, ODI and Test data is imported into the dev DB, and the IPL import was spot-checked against known scorecards.
+
 **Not verified:** nothing has run against the **real** API-Sports, Gemini, Groq or Tavily APIs yet, because no keys were set. Behaviour against real payloads (especially the Gemini structured-output schema and API-Sports error formats) needs a live smoke test once keys exist. See §10.
 
-**State of the environment:** the project is **not a git repository** yet. `.env` exists locally with no API keys, and the dev DB is empty except for the seeded `sports` rows.
+**State of the environment:** git repository on `master`. `.env` exists locally with no API keys, and the dev DB is empty except for the seeded `sports` rows.
 
 ## 4. Architecture
 
@@ -172,12 +184,47 @@ npm run typecheck && npm test       # must stay green
 
 Useful SQL: `select name, state, count(*) from pgboss.job group by 1,2;` and `select * from scrape_runs order by id desc limit 20;`
 
+## 9a. Cricket data
+
+- **Identity:** teams use `provider='cricket'`, `external_id='<m|f>:<normalized name>'`, from `cricketTeamKey` (TS) and `team_key` (Python). Both must give the same result; a parity test exists in each language. Franchise renames live in `KNOWN_ALIASES` / `CRICKET_KNOWN_ALIASES`, and an alias row is written only when a match uses the old name. Players use `provider='cricsheet'` with the people-register ID. Venues use the Cricsheet venue-register ID (format 1.3), or `name:<normalized>` when there is none.
+- **Matches:** Cricsheet rows have `provider='cricsheet'` and `external_id=<file id>`. `match_aliases` records the Cricsheet ID when the result attaches to an existing CricketData fixture (same teams, same UTC date). Cricket `home_score`/`away_score` hold total runs (super overs excluded). **Use `winner_team_id` and `result_type` for labels, not the scores** (DLS, super overs).
+- **Import:** idempotent by `ingest_files.sha256`. A changed file deletes and rewrites that match's innings, deliveries and line-ups. Bad files are recorded as `failed` and don't stop the run. Deliveries go in with COPY at about 11 matches/s.
+- **Formats:** T20 (T20 and IT20), ODI, ListA (ODM), Test, MultiDay (MDM). Phase splits are T20 overs 1–6/7–15/16–20 and ODI 1–10/11–40/41–50, with null for multi-day formats.
+- `deliveries.bowler_type` (pace/spin) is empty, because Cricsheet doesn't record bowling style. A source is needed before the spin-vs-pace features (architecture §6.2) can be built.
+- The CricketData adapter is **unverified**: their docs need JavaScript and no key was available. Only the failure envelope (HTTP 200, `{"status":"failure","reason":...}`) is confirmed. Verify field names with a real key and add recorded payloads to the tests.
+
+## 9a2. Cricket model (`ml-service/tusky_ml/cricket/`)
+
+- `data.py` loads matches, innings (super overs excluded), per-player batting and bowling per match (aggregated in SQL from `deliveries`) and line-ups. `features.py` replays matches with **state per format** and outputs `pre_*`/`post_*` XI features, toss features, labels (1, 0, or 0.5 for a draw; None = no decision) and first-innings rows. The `fi1_`/`fi2_` columns are the two batting-order scenarios, and `fi_` is the actual order.
+- `model.py`: `WinModel` is trained on both orientations and symmetrized (`swap` negates the `ANTISYMMETRIC` features). Candidates are logistic, hgb and an ensemble, plus the coin-flip and `EloOnly` references. The nested temperature (`_nested_temperature`) is adopted only if later folds improve. `FirstInningsModel` uses quantile HGB with CQR widening. The report includes segment breakdowns.
+- `pipeline.py` handles artifacts at `artifacts/cricket/<fmt>/`. `predict` picks pre- or post-toss by `toss_a != 0` and stores per-format versions (`upsert_predictions` takes a per-row `version` column).
+- Migration 0003 makes `predictions.exp_home_score`/`exp_away_score` nullable (null for cricket).
+- **First full-data results (2026-11-24)**, backtest on the newest half, post-toss model:
+  - T20: log-loss 0.541 vs coin flip 0.693 and Elo-only 0.616, AUC 0.80, accuracy 72%.
+  - ODI: 0.598, AUC 0.74.
+  - Test (3-way): 0.911 vs base rates 1.037.
+  - First innings: T20 median off by 29 runs on average vs 36 for the venue average; ODI 49 vs 58; the 10–90% range covers 78–79% of scores.
+- **IPL finding:** for recent IPL seasons (n≈215 in the backtest) neither the model nor Elo-only beats a coin flip (raw log-loss 0.707–0.714). Per-segment nested calibration (`segment_calibration` in the report) therefore shrinks club predictions almost to 50/50 (×0.08), sharpens women's T20 (×1.55), and leaves the other segments alone. The headline T20 accuracy comes mostly from internationals and women's cricket. Improving IPL is open work: auction-era squad turnover and player-level form are the likely levers. Don't claim IPL skill without new evidence.
+- Known gaps: there is no weather yet (module 3). Pace vs spin needs bowling-style data. Associate T20Is inflate the overall accuracy, so read the `segments` in the report.
+
+## 9b. ML service (`ml-service/`)
+
+- Python 3.11+, venv at `ml-service/.venv` (gitignored), created by `npm run ml:setup`. npm scripts go through `ml-service/run.mjs`. The config comes from the repo-root `.env` (`DATABASE_URL`, `ML_*`).
+- `features.py` replays every match of a sport in kick-off order and records the state **before** each match, then updates it with the result. Training and prediction share that code path, so there is no train/serve skew. A test checks that changing a result never changes earlier features.
+- Each match becomes 2 "team perspective" rows (`team_rows`), so one regressor predicts "score of T vs O".
+- `models.py`: football `glm` (PoissonRegressor on log-rates) or `hgb` (HistGB, poisson loss), plus Dixon-Coles `rho` fitted by MLE. Basketball `linear` (Ridge) or `hgb`, plus `sigma_margin`/`sigma_total` measured on the validation fold.
+- `pipeline.train`: rolling-origin backtest (`backtest`, 4 expanding-window folds over the newest half), candidates `glm|hgb|ensemble` (football) and `linear|hgb|ensemble` (basketball), picks the best (football by RPS, basketball by log-loss), refits on all rows, and writes `artifacts/<sport>/model.joblib` and `report.json`. It refuses to train on fewer than `ML_MIN_TRAIN_MATCHES` usable matches; a match is usable when both teams have at least 3 prior games.
+- `predictions` has one row per (match, model_version), upserted. Readers should take the newest `updated_at` per match. `details` jsonb holds the sport-specific extras.
+- `features.py` also keeps **online opponent-adjusted attack/defence ratings** (`rating_lr`; football 0.04, basketball 0.08) and exposes their implied scoring rate as the `rate` feature. Football training uses recency weights (`sample_half_life_days=365`).
+- `npm`-less benchmark: `node ml-service/run.mjs bench` gives the share of skill captured between baseline (0%) and the true-strength oracle (100%), over 5 synthetic leagues with in-season drift. As of 2026-11-23: football about 65% (ensemble/glm), basketball about 77% (linear). Judge modelling changes with it. Already tried and rejected: temperature/probit calibration (worse out of sample) and recency weights for basketball. **The model has not been trained on real data yet.**
+- Known limits: Elo across leagues starts equal, so cross-league cups (league 2 = UCL) are weak at first. Player data (`player_stats` and `player_insights` injuries) is **not** used yet because it is too sparse on the free tier.
+
 ## 10. Suggested next steps (in priority order)
 
 1. **Live smoke test with real keys.** Run `--once`, then the scraper, and check that real API-Sports payloads map correctly. Also check that **Gemini accepts `PlayerHistorySchema`** for structured output; if not, try `method: "jsonMode"` or simplify nullable fields. Confirm the Groq fallback by setting a bad `GOOGLE_API_KEY`. Fix whatever breaks and add recorded payloads to `packages/providers/test/fixtures.ts`.
 2. **Quota prioritisation.** Give pg-boss priority to matches by kick-off time, and enrich only probable starters (API-Football `/fixtures/lineups` is about 1 hour before kick-off) or cap players per team by minutes played.
 3. **Backend (Express)** in `backend/`: read endpoints for matches, players and insights (manual beats llm, newest first), then rate limiting. Reuse `@tusky/db` and `@tusky/shared`.
-4. **Prediction service:** pre-match predictions from `player_stats`, `player_insights` and team form.
+4. **Prediction service:** ~~done~~ (team-level model in `ml-service/`). Next: once API keys exist, backfill 2–3 seasons, train, and check `report.json`. Then add player availability (injuries from `player_insights`, starting XI) as features and expose `predictions` through the API.
 5. **Live polling:** implement `workers/livePoll.ts` as described in its header comment (`/fixtures/events`, `match_events` with `dedupeKey`, self re-enqueue every 60s, status from the feed). This needs a paid plan or a short list of featured matches.
 6. **Frontend (React)** in `frontend/`.
 7. **Cricket** via a new provider adapter.

@@ -3,3 +3,12 @@ dist/
 .env
 *.log
 coverage/
+
+# ml-service
+.venv/
+__pycache__/
+.pytest_cache/
+ml-service/artifacts/
+
+# bulk downloads (Cricsheet etc.)
+data/cricsheet/

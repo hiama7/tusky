@@ -23,6 +23,8 @@ export interface RawFootballFixture {
     home: { id: number; name: string; logo: string | null };
     away: { id: number; name: string; logo: string | null };
   };
+  goals?: { home: number | null; away: number | null } | null;
+  score?: { fulltime?: { home: number | null; away: number | null } | null } | null;
 }
 
 interface RawSquad {
@@ -69,6 +71,17 @@ export function mapFootballStatus(short: string): MatchStatus {
   return "scheduled"; // NS, TBD
 }
 
+/**
+ * Final score of a completed fixture. Uses the 90-minute (`score.fulltime`) result so
+ * extra time / penalties don't distort a goals model; falls back to `goals`.
+ */
+export function footballFinalScore(f: RawFootballFixture): { home: number | null; away: number | null } {
+  if (mapFootballStatus(f.fixture.status.short) !== "completed") return { home: null, away: null };
+  const ft = f.score?.fulltime;
+  if (ft && ft.home != null && ft.away != null) return { home: ft.home, away: ft.away };
+  return { home: f.goals?.home ?? null, away: f.goals?.away ?? null };
+}
+
 export function mapFootballFixture(f: RawFootballFixture): NormalizedFixture {
   return {
     externalId: String(f.fixture.id),
@@ -86,6 +99,7 @@ export function mapFootballFixture(f: RawFootballFixture): NormalizedFixture {
     },
     home: { externalId: String(f.teams.home.id), name: f.teams.home.name, country: f.league.country ?? null, logoUrl: f.teams.home.logo },
     away: { externalId: String(f.teams.away.id), name: f.teams.away.name, country: f.league.country ?? null, logoUrl: f.teams.away.logo },
+    score: footballFinalScore(f),
     raw: f,
   };
 }
@@ -151,6 +165,12 @@ export class FootballAdapter implements SportAdapter {
       }
     }
     return out;
+  }
+
+  async fetchSeasonResults(leagueExternalId: string, season: string): Promise<NormalizedFixture[]> {
+    // One request returns the whole season (~380 fixtures for a 20-team league).
+    const raw = await this.client.get<RawFootballFixture>("/fixtures", { league: leagueExternalId, season, timezone: "UTC" }, true);
+    return raw.map(mapFootballFixture);
   }
 
   async fetchSquad(teamExternalId: string): Promise<NormalizedSquadPlayer[]> {

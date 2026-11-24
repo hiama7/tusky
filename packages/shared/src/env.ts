@@ -28,13 +28,23 @@ const EnvSchema = z.object({
   APISPORTS_DAILY_BUDGET: z.coerce.number().int().positive().default(90),
   /** Gap between API-Sports calls per sport (free tier ~10 req/min). */
   APISPORTS_MIN_INTERVAL_MS: z.coerce.number().int().min(0).default(6_500),
-  ENABLED_SPORTS: csv.pipe(z.array(z.enum(["football", "basketball"]))).default(["football"]),
+  ENABLED_SPORTS: csv.pipe(z.array(z.enum(["football", "basketball", "cricket"]))).default(["football"]),
   FOOTBALL_LEAGUE_IDS: csv,
   BASKETBALL_LEAGUE_IDS: csv,
+
+  /** CricketData.org (cricapi) key: cricket fixtures, toss and live state. History comes from Cricsheet. */
+  CRICKETDATA_API_KEY: optionalString,
+  /** Free tier is ~100 hits/day; keep a margin. */
+  CRICKETDATA_DAILY_BUDGET: z.coerce.number().int().positive().default(90),
+  /** Keep only these cricket formats (T20, ODI, Test). Empty = all. */
+  CRICKET_FORMATS: csv,
 
   FIXTURE_DAYS_AHEAD: z.coerce.number().int().min(0).max(14).default(2),
   FETCH_FIXTURES_CRON: z.string().default("0 */6 * * *"),
   PROMOTE_LIVE_CRON: z.string().default("* * * * *"),
+  /** Daily re-fetch of recent days so completed matches get their final scores (training labels). */
+  SYNC_RESULTS_CRON: z.string().default("30 3 * * *"),
+  RESULTS_DAYS_BACK: z.coerce.number().int().min(1).max(7).default(2),
 
   HISTORY_STALE_DAYS: z.coerce.number().int().positive().default(7),
   PLAYER_HISTORY_CONCURRENCY: z.coerce.number().int().positive().default(2),

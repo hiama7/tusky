@@ -5,6 +5,7 @@
     "packages/*/*.config.ts",
     "packages/*/test/**/*.ts",
     "scheduler/src/**/*.ts",
+    "scheduler/scripts/**/*.ts",
     "scheduler/test/**/*.ts",
     "test/**/*.ts",
     "vitest.config.ts",

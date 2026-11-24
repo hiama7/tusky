@@ -3,6 +3,7 @@ import { closeDb } from "@tusky/db";
 import { childLogger, env, getBoss, stopBoss } from "@tusky/shared";
 import { fetchUpcomingMatches } from "./jobs/fetchUpcomingMatches.ts";
 import { promoteLiveMatches } from "./jobs/promoteLiveMatches.ts";
+import { syncRecentResults } from "./jobs/syncRecentResults.ts";
 
 const log = childLogger("scheduler");
 const once = process.argv.includes("--once");
@@ -31,6 +32,7 @@ if (once) {
   log.info("running jobs once (--once)");
   await safely("fetchUpcomingMatches", fetchUpcomingMatches);
   await safely("promoteLiveMatches", promoteLiveMatches);
+  if (process.argv.includes("--results")) await safely("syncRecentResults", syncRecentResults);
   await shutdown(0);
 } else {
   cron.schedule(env.FETCH_FIXTURES_CRON, () => safely("fetchUpcomingMatches", fetchUpcomingMatches), {
@@ -43,8 +45,18 @@ if (once) {
     timezone: "UTC",
     noOverlap: true,
   });
+  cron.schedule(env.SYNC_RESULTS_CRON, () => safely("syncRecentResults", syncRecentResults), {
+    name: "syncRecentResults",
+    timezone: "UTC",
+    noOverlap: true,
+  });
   log.info(
-    { fetchFixtures: env.FETCH_FIXTURES_CRON, promoteLive: env.PROMOTE_LIVE_CRON, sports: env.ENABLED_SPORTS },
+    {
+      fetchFixtures: env.FETCH_FIXTURES_CRON,
+      promoteLive: env.PROMOTE_LIVE_CRON,
+      syncResults: env.SYNC_RESULTS_CRON,
+      sports: env.ENABLED_SPORTS,
+    },
     "scheduler started",
   );
 

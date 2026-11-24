@@ -5,7 +5,7 @@ const log = childLogger("api-sports");
 
 export const API_SPORTS_PROVIDER = "api-sports";
 
-const BASE_URLS: Record<SportCode, string> = {
+const BASE_URLS: Partial<Record<SportCode, string>> = {
   football: "https://v3.football.api-sports.io",
   basketball: "https://v1.basketball.api-sports.io",
 };
@@ -54,24 +54,27 @@ export interface QuotaGuard {
   reserve(sport: SportCode): Promise<void>;
 }
 
-/** Postgres-backed daily counter (API-Sports quotas reset at 00:00 UTC). */
-export const pgQuotaGuard: QuotaGuard = {
-  async reserve(sport) {
-    const day = new Date().toISOString().slice(0, 10);
-    const [row] = await db
-      .insert(providerQuota)
-      .values({ provider: API_SPORTS_PROVIDER, sport, day, requestsUsed: 1 })
-      .onConflictDoUpdate({
-        target: [providerQuota.provider, providerQuota.sport, providerQuota.day],
-        set: { requestsUsed: sql`${providerQuota.requestsUsed} + 1` },
-      })
-      .returning({ used: providerQuota.requestsUsed });
-    const used = row!.used;
-    if (used > env.APISPORTS_DAILY_BUDGET) {
-      throw new QuotaExceededError(sport, used - 1, env.APISPORTS_DAILY_BUDGET);
-    }
-  },
-};
+/** Postgres-backed daily request counter per provider + sport (quotas reset at 00:00 UTC). */
+export function makePgQuotaGuard(provider: string, budget: () => number): QuotaGuard {
+  return {
+    async reserve(sport) {
+      const day = new Date().toISOString().slice(0, 10);
+      const [row] = await db
+        .insert(providerQuota)
+        .values({ provider, sport, day, requestsUsed: 1 })
+        .onConflictDoUpdate({
+          target: [providerQuota.provider, providerQuota.sport, providerQuota.day],
+          set: { requestsUsed: sql`${providerQuota.requestsUsed} + 1` },
+        })
+        .returning({ used: providerQuota.requestsUsed });
+      const used = row!.used;
+      if (used > budget()) throw new QuotaExceededError(sport, used - 1, budget());
+    },
+  };
+}
+
+/** API-Sports daily budget guard. */
+export const pgQuotaGuard: QuotaGuard = makePgQuotaGuard(API_SPORTS_PROVIDER, () => env.APISPORTS_DAILY_BUDGET);
 
 /** Next 00:05 UTC, when the API-Sports quota has reset. */
 export function nextQuotaReset(now = new Date()): Date {
@@ -126,7 +129,9 @@ export class ApiSportsClient {
 
     await (this.opts.quota ?? pgQuotaGuard).reserve(this.sport);
 
-    const url = new URL(path, BASE_URLS[this.sport]);
+    const base = BASE_URLS[this.sport];
+    if (!base) throw new Error(`API-Sports has no API for sport '${this.sport}'`);
+    const url = new URL(path, base);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
 
     this.lastCallAt = Date.now();

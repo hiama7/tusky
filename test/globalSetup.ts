@@ -23,7 +23,7 @@ export default async function setup() {
   const pool = new pg.Pool({ connectionString: TEST_URL });
   await migrate(drizzle(pool), { migrationsFolder: fileURLToPath(new URL("../packages/db/migrations", import.meta.url)) });
   await pool.query(
-    "insert into sports (code, name) values ('football','Football'),('basketball','Basketball') on conflict do nothing",
+    "insert into sports (code, name) values ('football','Football'),('basketball','Basketball'),('cricket','Cricket') on conflict do nothing",
   );
   await pool.end();
   process.env.TUSKY_DB_AVAILABLE = "1";

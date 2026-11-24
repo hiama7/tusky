@@ -10,6 +10,7 @@ import {
   playerStats,
   scrapeRuns,
   sports,
+  teamAliases,
   teams,
 } from "./schema/index.ts";
 
@@ -69,6 +70,15 @@ export async function upsertTeam(input: TeamInput, conn: Conn = db): Promise<num
   return row!.id;
 }
 
+/** Team id registered for an alias key (e.g. an old franchise name), if any. */
+export async function resolveTeamAlias(sportId: number, alias: string, conn: Conn = db): Promise<number | null> {
+  const [row] = await conn
+    .select({ teamId: teamAliases.teamId })
+    .from(teamAliases)
+    .where(and(eq(teamAliases.sportId, sportId), eq(teamAliases.alias, alias)));
+  return row?.teamId ?? null;
+}
+
 export interface PlayerInput {
   sportId: number;
   provider: string;
@@ -114,6 +124,12 @@ export interface MatchInput {
   city?: string | null;
   status: (typeof matches.$inferInsert)["status"];
   providerStatus?: string | null;
+  homeScore?: number | null;
+  awayScore?: number | null;
+  format?: string | null;
+  tossWinnerTeamId?: number | null;
+  tossDecision?: string | null;
+  winnerTeamId?: number | null;
   raw?: unknown;
 }
 
@@ -132,6 +148,13 @@ export async function upsertMatch(input: MatchInput, conn: Conn = db): Promise<{
         venue: input.venue,
         city: input.city,
         providerStatus: input.providerStatus,
+        // A feed without scores (e.g. an upcoming-fixtures call) never erases a known result.
+        homeScore: sql`coalesce(excluded.home_score, ${matches.homeScore})`,
+        awayScore: sql`coalesce(excluded.away_score, ${matches.awayScore})`,
+        format: sql`coalesce(excluded.format, ${matches.format})`,
+        tossWinnerTeamId: sql`coalesce(excluded.toss_winner_team_id, ${matches.tossWinnerTeamId})`,
+        tossDecision: sql`coalesce(excluded.toss_decision, ${matches.tossDecision})`,
+        winnerTeamId: sql`coalesce(excluded.winner_team_id, ${matches.winnerTeamId})`,
         raw: input.raw,
         // Never move a match backwards (e.g. live -> scheduled) because of a stale feed,
         // but do accept provider-side postponements / cancellations.

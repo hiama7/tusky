@@ -18,6 +18,10 @@ export interface RawBasketballGame {
     home: { id: number; name: string; logo: string | null };
     away: { id: number; name: string; logo: string | null };
   };
+  scores?: {
+    home: { total: number | null } | null;
+    away: { total: number | null } | null;
+  } | null;
 }
 
 interface RawBasketballPlayer {
@@ -57,6 +61,11 @@ export function mapBasketballGame(g: RawBasketballGame): NormalizedFixture {
     },
     home: { externalId: String(g.teams.home.id), name: g.teams.home.name, country, logoUrl: g.teams.home.logo },
     away: { externalId: String(g.teams.away.id), name: g.teams.away.name, country, logoUrl: g.teams.away.logo },
+    // `total` includes overtime, so a completed game never ends level.
+    score:
+      mapBasketballStatus(g.status.short) === "completed"
+        ? { home: g.scores?.home?.total ?? null, away: g.scores?.away?.total ?? null }
+        : { home: null, away: null },
     raw: g,
   };
 }
@@ -85,6 +94,12 @@ export class BasketballAdapter implements SportAdapter {
       }
     }
     return out;
+  }
+
+  async fetchSeasonResults(leagueExternalId: string, season: string): Promise<NormalizedFixture[]> {
+    // API-Basketball seasons look like "2023-2024" (most leagues) or "2024".
+    const raw = await this.client.get<RawBasketballGame>("/games", { league: leagueExternalId, season, timezone: "UTC" }, true);
+    return raw.map(mapBasketballGame);
   }
 
   async fetchSquad(teamExternalId: string, season: string | null): Promise<NormalizedSquadPlayer[]> {

@@ -4,6 +4,7 @@ import { sports } from "./schema/index.ts";
 export const SPORT_SEED = [
   { code: "football", name: "Football" },
   { code: "basketball", name: "Basketball" },
+  { code: "cricket", name: "Cricket" },
 ];
 
 export async function seedSports(): Promise<void> {

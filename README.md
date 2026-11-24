@@ -57,6 +57,71 @@ npm run player:import -- ./data/sample-players.json              # manual player
 
 Manual imports (`source = manual`) mark the player `ready`, so the scraper skips them until `HISTORY_STALE_DAYS` has passed.
 
+## Cricket data
+
+History comes from [Cricsheet](https://cricsheet.org): free ball-by-ball data under the Open Data Commons Attribution licence, so the app must credit Cricsheet. Upcoming fixtures, toss and live state come from CricketData.org.
+
+```bash
+npm run cricket:import -- --dataset ipl      # downloads data/cricsheet/ipl_json.zip (5 MB) and imports it
+npm run cricket:import -- --dataset t20s     # also: odis, tests, it20s, recent (last 30 days), all (149 MB)
+npm run cricket:import -- --path ./some.zip  # a local zip, folder of .json, or one file
+npm run cricket:import -- --dataset recent   # incremental: unchanged files are skipped by content hash
+```
+
+- It writes `matches` (format, toss, winner, result type: normal/dls/super_over/tie/no_result/draw), `cricket_innings` (with powerplay/middle/death splits), `deliveries` (every ball), `match_lineups`, `venues` (Cricsheet venue IDs), `players` (Cricsheet register IDs) and `teams`.
+- Teams use one key for every source, `m:<name>` or `f:<name>`. Franchise renames (Kings XI Punjab → Punjab Kings, and so on) map to the same team, so history carries across the rename. The list lives in both `tusky_ml/ingest/cricsheet.py` and `packages/shared/src/cricket.ts`, and the two must match; a parity test checks this.
+- If a match already exists from CricketData (same teams, same date), the Cricsheet result attaches to that row instead of creating a duplicate.
+### Cricket predictions
+
+```bash
+npm run cricket:train                  # all formats with enough data: backtest report + saved models
+npm run cricket:train -- --format T20  # one format
+npm run cricket:evaluate               # backtest report only, nothing saved
+npm run cricket:predict                # score scheduled matches in the next 14 days -> predictions
+npm run cricket:predict -- --dry-run
+```
+
+- **One model set per format** (T20, ODI, Test), with state kept separately per format.
+- **Two win models.** *Pre-toss* uses each side's most recent XI. *Post-toss* adds the toss, the batting order and the announced XI. Prediction automatically uses the post-toss model once the toss is known.
+- **Features** are all computed from matches before kick-off:
+  - Elo and form over the last 5/10/20 matches
+  - batting and bowling run rates, wickets lost and taken
+  - head to head (shrunk when there are few meetings)
+  - the venue's average first-innings score and chasing win rate, plus team familiarity with the venue
+  - playing-XI batting average and strike rate, and bowling economy and strike rate, built from ball-by-ball data
+  - experience and availability (the share of regulars playing), rest days, gender and club vs international
+- **Win models** compare logistic regression, gradient boosting and their ensemble in a rolling backtest, against a coin flip and an Elo-only model. Probabilities are symmetrized, so swapping the two teams mirrors them exactly. For Tests, draws are a third outcome.
+- **Calibration:** a temperature is fitted on earlier folds and kept only if it improves later folds. The report records the evidence either way.
+- **First innings:** quantile gradient boosting gives a 10/50/90% projection, with the range widened by conformal calibration so that it covers about 80%. Before the toss, both batting-order scenarios are projected.
+- **Reports** break accuracy down by segment (men's internationals, men's club, women, close matches), because mismatched associate T20Is inflate the headline number.
+- Cricket predictions are stored in `predictions` with `exp_home_score`/`exp_away_score` left null; the projection lives in `details.first_innings`.
+
+- For fixtures, add `cricket` to `ENABLED_SPORTS` and set `CRICKETDATA_API_KEY`. The adapter has **not been checked against the live API yet**; see `packages/providers/src/cricketData/adapter.ts`.
+
+## Match predictions (ml-service, Python)
+
+`ml-service/` trains on completed matches in Postgres and writes home/draw/away probabilities and expected scores to the `predictions` table. It needs Python 3.11+.
+
+```bash
+npm run ml:setup                                                   # once: creates ml-service/.venv
+npm run history:backfill -- --sport football --seasons 2022,2023   # training data, ~1 request per league-season
+npm run history:backfill -- --sport basketball --seasons 2022-2023,2023-2024 --leagues 12
+npm run ml:train                     # backtest, pick the best model, save to ml-service/artifacts/
+npm run ml:predict                   # score scheduled matches in the next 14 days -> predictions
+npm run ml:predict -- --dry-run      # print only
+npm run ml:evaluate                  # backtest report, saves nothing
+npm run ml:run                       # service loop: predict hourly, retrain weekly
+npm run ml:test                      # Python tests
+node ml-service/run.mjs demo         # train + predict on a synthetic league, no DB or API key needed
+node ml-service/run.mjs bench        # compare model kinds against an oracle on synthetic leagues
+```
+
+- **Features** are leak-free: every match is replayed in kick-off order, so a match only sees results from before it. Features cover opponent-adjusted attack/defence ratings (updated online after each match), Elo (goal or margin weighted, regressed after the off-season), the recent scoring and conceding average overall and at the venue, the competition's scoring level, rest days and games played. Football training down-weights matches by age (half-life 365 days).
+- **Football**: a Poisson model predicts each side's expected goals. A Dixon-Coles scoreline grid then gives home/draw/away, the top 5 scores, over/under 1.5/2.5/3.5, both teams to score and clean sheets.
+- **Basketball**: a points regression gives each side's expected points. A normal distribution for the margin and the total, with its spread measured on held-out games, gives the win probability, spread, total and over/under. There are no draws (overtime).
+- **Model selection**: three candidates (GLM or linear, gradient boosting, and an equal-weight ensemble of the two) are scored with a rolling-origin backtest. The newest half of the matches is split into 4 blocks, and each block is predicted by a model fitted only on the matches before it. Selection uses RPS for football and log-loss for basketball, and the winner is refitted on all the data. A tested temperature-calibration layer made held-out results worse, so it is not used. The report in `artifacts/<sport>/report.json` compares it with a base-rate baseline and includes a calibration table.
+- The scheduler's daily `syncRecentResults` job re-fetches the last two days so finished matches get their scores and become new training data.
+
 ## Budget notes (free tiers)
 
 - Fixtures cost **1 request per day per sport**, regardless of the league filter.
@@ -72,6 +137,7 @@ packages/db         drizzle schema, client, upsert helpers, migrations
 packages/providers  API-Sports client (quota guard + throttle), football/basketball adapters
 scheduler/          cron jobs
 scrapper-service/   workers, LangGraph agent, CLI scripts
+ml-service/         Python: features, models, train/predict CLI (writes `predictions`)
 ```
 
 ## Tests
@@ -79,6 +145,7 @@ scrapper-service/   workers, LangGraph agent, CLI scripts
 ```bash
 npm test   # unit tests + pipeline integration test (uses a separate tusky_test DB; skipped if Postgres is down)
 npm run typecheck
+npm run ml:test   # Python: features, models, and a Postgres round trip against tusky_test
 ```
 
 `npm test` goes through `test/run-vitest.mjs`, which changes the drive letter to uppercase. Vitest 5 breaks on Windows when the working directory starts with a lowercase `c:\`.
