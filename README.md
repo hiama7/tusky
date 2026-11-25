@@ -84,6 +84,7 @@ node ml-service/.venv/Scripts/python.exe ml-service/experiments/t20_calibration.
 ```
 
 - Reports: [docs/reports/ml-audit-2026-11.md](docs/reports/ml-audit-2026-11.md) and [docs/reports/ml-comparison-2026-11.md](docs/reports/ml-comparison-2026-11.md). Reliability diagrams are in `docs/reports/figures/`.
+- Final report (all phases, original vs improved, limitations): [docs/reports/final-report-2026-11.md](docs/reports/final-report-2026-11.md).
 - Phase 3 (new features incl. weather, none adopted): [docs/reports/phase3-features-2026-11.md](docs/reports/phase3-features-2026-11.md).
 - Finding so far: XGBoost, LightGBM, CatBoost, random forest, logistic regression, their ensemble and a blend with the existing models do not beat the existing models by a statistically meaningful margin; calibration helps cricket T20 only, and production's per-segment temperature scaling beats Platt and isotonic regression there.
 - The Python environment lives in `ml-service/.venv`. Installing the large ML wheels inside a OneDrive folder can stall for many minutes; if that happens, create the environment outside OneDrive.
