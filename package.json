@@ -29,6 +29,7 @@
     "ml:train": "node ml-service/run.mjs train",
     "ml:predict": "node ml-service/run.mjs predict",
     "ml:evaluate": "node ml-service/run.mjs evaluate",
+    "ml:audit": "node ml-service/run.mjs audit",
     "ml:run": "node ml-service/run.mjs run",
     "ml:test": "node ml-service/run.mjs pytest",
     "typecheck": "tsc -p tsconfig.json --noEmit",

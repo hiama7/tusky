@@ -184,6 +184,14 @@ npm run typecheck && npm test       # must stay green
 
 Useful SQL: `select name, state, count(*) from pgboss.job group by 1,2;` and `select * from scrape_runs order by id desc limit 20;`
 
+## 9a000. Audit and model comparison (2026-11-24, user's 9-phase brief, phases 1, 2, 4, 5 done)
+
+- **Brief premises that do not exist in the repo:** a Cricbuzz scraper (none; do not scrape Cricbuzz without checking its terms), a frontend (`frontend/` and `backend/` are empty). Phases 7 and 8 (live engine, dashboard) wait on a live-source decision (CricketData.org adapter, unverified, no key) and on building a FastAPI + React app from scratch.
+- `tusky_ml/audit.py` + `audit_run.py` (`npm run ml:audit`): causal leakage probe (rebuild features from earlier matches only, own result hidden; must match the full build exactly) and noise probe, both with planted-leak tests; overfit gaps; calibration vs ECE noise floor; data quality. Result: **no leakage**; basketball data 519 days stale; Test/ODI gradient boosting overfits.
+- `tusky_ml/zoo.py`, `calibrate.py`, `compare.py` (`compare` command): logreg/RF/HGB/XGBoost/LightGBM/CatBoost with Optuna on validation only, Platt/isotonic chosen by blocked CV on validation, equal-weight ensemble and blend with the existing model, one untouched test window, paired bootstrap intervals. A test proves scrambled test labels change no choice. Metrics added: ECE, noise floor, reliability tables, binary Brier (`brier()` for two outcomes is 2x the conventional Brier).
+- **Result: no new algorithm or ensemble beats the existing models significantly** (football, basketball, ODI, Test); cricket T20's production per-segment temperature scaling beats Platt/isotonic (log-loss 0.5378 vs 0.5417, significant). The limit is information, so the next gains need new features (phase 3). Promotion rule for phase 6: paired 95% interval above zero on a held-out window and calibration within noise.
+- The venv inside OneDrive made `pip install` of xgboost/lightgbm/catboost stall for ~15 minutes.
+
 ## 9a00. Football 2025–26 data, tuning and report (2026-11-24)
 
 Full results: [docs/reports/football-2026-11.md](docs/reports/football-2026-11.md).

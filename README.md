@@ -75,6 +75,18 @@ npm run ml:train -- --sport football                     # retrains with the sav
 - The results of the last full run are in [docs/reports/football-2026-11.md](docs/reports/football-2026-11.md).
 - football-data.co.uk offers CSVs with shots and odds, but its terms limit use to private individuals and exclude commercial and data-training products, so this project does not use it.
 
+## Measuring and comparing models
+
+```bash
+npm run ml:audit                               # data quality, leakage probes, overfitting, calibration, staleness (artifacts/audit.json)
+node ml-service/run.mjs compare --trials 25    # model zoo + Optuna + calibration on identical chronological windows, one untouched test window
+node ml-service/.venv/Scripts/python.exe ml-service/experiments/t20_calibration.py   # calibration methods compared on cricket T20 (run from ml-service/)
+```
+
+- Reports: [docs/reports/ml-audit-2026-11.md](docs/reports/ml-audit-2026-11.md) and [docs/reports/ml-comparison-2026-11.md](docs/reports/ml-comparison-2026-11.md). Reliability diagrams are in `docs/reports/figures/`.
+- Finding so far: XGBoost, LightGBM, CatBoost, random forest, logistic regression, their ensemble and a blend with the existing models do not beat the existing models by a statistically meaningful margin; calibration helps cricket T20 only, and production's per-segment temperature scaling beats Platt and isotonic regression there.
+- The Python environment lives in `ml-service/.venv`. Installing the large ML wheels inside a OneDrive folder can stall for many minutes; if that happens, create the environment outside OneDrive.
+
 ## Cricket data
 
 History comes from [Cricsheet](https://cricsheet.org): free ball-by-ball data under the Open Data Commons Attribution licence, so the app must credit Cricsheet. Upcoming fixtures, toss and live state come from CricketData.org.

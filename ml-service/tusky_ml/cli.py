@@ -241,6 +241,70 @@ def cmd_tune(args, settings) -> int:
     return 0
 
 
+def print_comparison(res: dict) -> None:
+    cmp = res["comparison"]
+    t = res["test"]
+    w = res["windows"]
+    print(f"\n{res['task']}: train {w['train'][2]} / validation {w['validation'][2]} / TEST {w['test'][2]} matches ({w['test'][0]} to {w['test'][1]}), {res['features']} features, {res['trials']} Optuna trials per family")
+    k3 = res["k"] == 3
+    head = f"  {'model':<22}{'log_loss':>9}{'brier':>8}{'acc':>7}{'prec':>7}{'rec':>7}{'f1':>7}{'auc':>7}{'ece':>8}" + (f"{'rps':>8}" if k3 else "")
+    print(head)
+
+    def line(label, m):
+        auc = f"{m['roc_auc']:.3f}" if m.get("roc_auc") is not None else "  n/a"
+        print(f"  {label:<22}{m['log_loss']:>9.4f}{m.get('brier_binary', m['brier']):>8.4f}{m['accuracy']:>7.3f}{m['precision']:>7.3f}{m['recall']:>7.3f}{m['f1']:>7.3f}{auc:>7}{m['ece']:>8.4f}"
+              + (f"{m['rps']:>8.4f}" if k3 else ""))
+
+    line("base rates", t["base_rates"])
+    for name in ("existing", *res["families"], "ensemble", "blend"):
+        tag = {"existing": f"existing ({res['existing_model']})"}.get(name, name)
+        line(f"{tag[:15]} raw", t[name]["raw"])
+        line(f"{tag[:9]} +{t[name]['calibrator']}", t[name]["calibrated"])
+    g = cmp["paired_log_loss_gain_vs_existing"]
+    print(f"  selected on validation: {cmp['new_model']}{' (ensemble adopted)' if res['ensemble_adopted'] else ''}; "
+          f"test log-loss {cmp['log_loss_existing']:.4f} -> {cmp['log_loss_new']:.4f} = {cmp['improvement_pct_vs_existing']:+.2f}% "
+          f"(paired gain {g['mean']:+.4f}, 95% interval {g['ci95'][0]:+.4f} to {g['ci95'][1]:+.4f})")
+    print("  (brier column: conventional binary Brier for 2-outcome tasks, sum-over-classes for football/Test)")
+
+
+def cmd_compare(args, settings) -> int:
+    from . import compare
+
+    names = [x.strip() for x in args.tasks.split(",") if x.strip()] or list(compare.TASKS)
+    out_dir = settings.artifacts_dir / "compare"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    from .config import REPO_ROOT
+
+    with db.connect(settings.database_url) as conn:
+        for name in names:
+            res = compare.run_task(conn, settings.artifacts_dir, compare.TASKS[name], trials=args.trials, seed=args.seed,
+                                   figures_dir=REPO_ROOT / "docs" / "reports" / "figures")
+            (out_dir / f"{name}.json").write_text(json.dumps(res, indent=2, default=str), encoding="utf-8")
+            print_comparison(res)
+    return 0
+
+
+def cmd_audit(args, settings) -> int:
+    from . import audit_run
+
+    with db.connect(settings.database_url) as conn:
+        res = audit_run.run(conn, settings.artifacts_dir, quick=args.quick)
+    out = settings.artifacts_dir / "audit.json"
+    out.write_text(json.dumps(res, indent=2, default=str), encoding="utf-8")
+    print(f"audit saved to {out}")
+    for sport in ("football", "basketball"):
+        r = res[sport]
+        cp, npb = r["causal_probe"], r["noise_probe"]
+        print(f"{sport}: causal probe {'PASSED' if cp['passed'] else 'FAILED'} ({cp['matches_probed']} matches, max difference {cp['max_abs_difference']:.2e}); "
+              f"noise probe skill {npb['skill_vs_base_pct']:+.2f}% vs base rates")
+    c = res["cricket"]
+    cp = c["causal_probe"]
+    print(f"cricket: causal probe {'PASSED' if cp['passed'] else 'FAILED'} ({cp['matches_probed']} matches, max difference {cp['max_abs_difference']:.2e})")
+    if "noise_probe" in c:
+        print(f"cricket: noise probe AUC {c['noise_probe']['roc_auc']} (0.5 = no signal)")
+    return 0
+
+
 def cmd_thesportsdb(args, settings) -> int:
     from .config import REPO_ROOT
     from .ingest import thesportsdb as tsdb
@@ -428,6 +492,14 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--seed", type=int, default=7)
     sp.add_argument("--no-save", action="store_true")
 
+    sp = sub.add_parser("compare", help="compare model families against the existing model on identical chronological windows")
+    sp.add_argument("--tasks", default="", help="football,basketball,cricket-T20,cricket-ODI,cricket-Test (default: all)")
+    sp.add_argument("--trials", type=int, default=25, help="Optuna trials per model family")
+    sp.add_argument("--seed", type=int, default=0)
+
+    sp = sub.add_parser("audit", help="measured audit: data quality, leakage probes, overfitting, calibration, staleness")
+    sp.add_argument("--quick", action="store_true", help="fewer probes (faster)")
+
     sp = sub.add_parser("thesportsdb", help="fill results openfootball lacks (slow, cached, uses a shared free key)")
     sp.add_argument("--leagues", default="", help="en.1,es.1,... (default: every league with missing results)")
     sp.add_argument("--refresh", action="store_true", help="ignore the cache and fetch again")
@@ -458,6 +530,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_cricsheet(args, load_settings())
     if args.cmd == "tune":
         return cmd_tune(args, load_settings())
+    if args.cmd == "compare":
+        return cmd_compare(args, load_settings())
+    if args.cmd == "audit":
+        return cmd_audit(args, load_settings())
     if args.cmd == "thesportsdb":
         return cmd_thesportsdb(args, load_settings())
     if args.cmd == "openfootball":
