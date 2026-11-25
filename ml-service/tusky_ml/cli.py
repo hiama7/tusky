@@ -131,11 +131,15 @@ def cmd_run(args, settings) -> int:
                 with db.connect(settings.database_url) as conn:
                     matches = db.load_matches(conn, sport)
                     if stale:
-                        tune.apply_saved(settings.artifacts_dir, sport)
+                        # Not a blind retrain: the challenger replaces the production model only if it
+                        # is significantly better on held-out new matches (see promote.py).
+                        from . import promote, subjects
+
                         try:
-                            model = pipeline.train(sport, matches, min_matches=settings.min_train_matches)
-                            pipeline.save(model, settings.artifacts_dir)
-                            log.info("%s: retrained %s (%s)", sport, model.version, model.report["validation"][model.kind])
+                            res = promote.run_cycle(subjects.team_subject(conn, settings.artifacts_dir, sport, settings.min_train_matches), settings.artifacts_dir,
+                                                    log=lambda m: log.info("%s", m))
+                            log.info("%s: retrain cycle -> %s (%s)", sport, res["action"], res.get("reason", ""))
+                            model = pipeline.load(settings.artifacts_dir, sport)
                         except pipeline.NotEnoughData as e:
                             log.warning("%s", e)
                     if model is not None:
@@ -319,6 +323,56 @@ def cmd_ablate(args, settings) -> int:
             print(f"  kept by validation: {kg['groups'] or 'none'}")
             ex = res["new_ensemble_vs_existing"]
             print(f"  new-feature ensemble vs existing model on test: paired gain {ex['mean']:+.4f} ({ex['ci95'][0]:+.4f} to {ex['ci95'][1]:+.4f})")
+    return 0
+
+
+def cmd_retrain(args, settings) -> int:
+    from . import promote, subjects
+
+    targets = [x.strip() for x in args.target.split(",") if x.strip()] if args.target else list(subjects.TARGETS)
+    rules = promote.Rules(min_eval=args.min_eval, eval_frac=args.eval_frac)
+    feats = None
+    status = 0
+    for target in targets:
+        if target not in subjects.TARGETS:
+            print(f"! unknown target {target}; choose from {', '.join(subjects.TARGETS)}", file=sys.stderr)
+            return 2
+        try:
+            if target.startswith("cricket-"):
+                from .cricket import pipeline as cp  # noqa: F401
+
+                feats = feats if feats is not None else _cricket_feats(settings)
+                subject = subjects.cricket_subject(feats, settings.artifacts_dir, target.split("-", 1)[1], args.min_matches or settings.min_train_matches)
+            else:
+                with db.connect(settings.database_url) as conn:
+                    subject = subjects.team_subject(conn, settings.artifacts_dir, target, args.min_matches or settings.min_train_matches)
+            res = promote.run_cycle(subject, settings.artifacts_dir, rules, dry_run=args.dry_run)
+            print(f"{target}: {res['action']} - {res.get('reason', '')}")
+        except (pipeline.NotEnoughData, ValueError) as e:
+            print(f"! {target}: {e}", file=sys.stderr)
+            status = 2
+    return status
+
+
+def cmd_registry(args, settings) -> int:
+    from . import subjects
+    from .registry import Registry
+
+    for target in [x.strip() for x in args.target.split(",") if x.strip()] if args.target else list(subjects.TARGETS):
+        reg = Registry(settings.artifacts_dir, subjects.key_for(target))
+        st = reg.state()
+        print(f"{target}: production = {st['production']}; versions = {reg.versions()}")
+        for h in st["history"][-args.last:]:
+            print(f"    {h['at'][:19]}  {h['action']:<16} {h.get('version') or '-':<40} {h['reason'][:110]}")
+    return 0
+
+
+def cmd_rollback(args, settings) -> int:
+    from . import subjects
+    from .registry import Registry
+
+    reg = Registry(settings.artifacts_dir, subjects.key_for(args.target))
+    print(f"{args.target}: production is now {reg.rollback()}")
     return 0
 
 
@@ -538,6 +592,20 @@ def main(argv: list[str] | None = None) -> int:
     sp = sub.add_parser("weather", help="geocode cricket venues and fetch match-day weather from Open-Meteo (cached, throttled)")
     sp.add_argument("--skip-geocode", action="store_true")
 
+    sp = sub.add_parser("retrain", help="Phase 6: retrain, compare with the production model on held-out new matches, promote only if better")
+    sp.add_argument("--target", default=None, help="football,basketball,cricket-T20,cricket-ODI,cricket-Test (default: all)")
+    sp.add_argument("--dry-run", action="store_true", help="decide and report, change nothing")
+    sp.add_argument("--min-eval", type=int, default=150, help="matches needed in the evaluation window")
+    sp.add_argument("--eval-frac", type=float, default=0.5, help="share of the new matches (newest) held out for evaluation")
+    sp.add_argument("--min-matches", type=int, default=None)
+
+    sp = sub.add_parser("registry", help="show model versions and the promotion history")
+    sp.add_argument("--target", default=None)
+    sp.add_argument("--last", type=int, default=5)
+
+    sp = sub.add_parser("rollback", help="put the previous production model version back")
+    sp.add_argument("--target", required=True)
+
     sp = sub.add_parser("ablate", help="Phase 3: what do the new feature groups add on the untouched test window")
     sp.add_argument("--tasks", default="football,basketball", help="football,basketball,cricket-T20,cricket-ODI,cricket-Test")
     sp.add_argument("--trials", type=int, default=15)
@@ -583,6 +651,12 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_weather(args, load_settings())
     if args.cmd == "ablate":
         return cmd_ablate(args, load_settings())
+    if args.cmd == "retrain":
+        return cmd_retrain(args, load_settings())
+    if args.cmd == "registry":
+        return cmd_registry(args, load_settings())
+    if args.cmd == "rollback":
+        return cmd_rollback(args, load_settings())
     if args.cmd == "compare":
         return cmd_compare(args, load_settings())
     if args.cmd == "audit":
