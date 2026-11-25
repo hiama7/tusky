@@ -284,6 +284,44 @@ def cmd_compare(args, settings) -> int:
     return 0
 
 
+def cmd_weather(args, settings) -> int:
+    from . import weather
+    from .config import REPO_ROOT
+
+    with db.connect(settings.database_url) as conn:
+        if not args.skip_geocode:
+            weather.geocode_venues(conn, cache_dir=REPO_ROOT / "data" / "openmeteo")
+        res = weather.fetch_and_store(conn, REPO_ROOT / "data" / "openmeteo")
+    print(f"weather: {res['matches_with_weather']} cricket matches now have match-day weather")
+    print("Data: Open-Meteo (open-meteo.com), free non-commercial API; ERA5 reanalysis. Replace or license before a commercial release.")
+    return 0
+
+
+def cmd_ablate(args, settings) -> int:
+    from . import ablate
+
+    names = [x.strip() for x in args.tasks.split(",") if x.strip()]
+    out_dir = settings.artifacts_dir / "ablate"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with db.connect(settings.database_url) as conn:
+        for name in names:
+            if args.calibrated:
+                groups = [g.strip() for g in args.groups.split(",") if g.strip()]
+                res = ablate.run_cricket_calibrated(conn, settings.artifacts_dir, name, groups, trials=args.trials, seed=args.seed, with_weather=args.weather)
+                (out_dir / f"{name}-calibrated.json").write_text(json.dumps(res, indent=2, default=str), encoding="utf-8")
+                continue
+            if name in ("football", "basketball"):
+                res = ablate.run_team_sport(conn, settings.artifacts_dir, name, trials=args.trials, seed=args.seed)
+            else:
+                res = ablate.run_cricket(conn, settings.artifacts_dir, name, trials=args.trials, seed=args.seed, with_weather=args.weather)
+            (out_dir / f"{name}.json").write_text(json.dumps(res, indent=2, default=str), encoding="utf-8")
+            kg = res["kept_groups"]
+            print(f"  kept by validation: {kg['groups'] or 'none'}")
+            ex = res["new_ensemble_vs_existing"]
+            print(f"  new-feature ensemble vs existing model on test: paired gain {ex['mean']:+.4f} ({ex['ci95'][0]:+.4f} to {ex['ci95'][1]:+.4f})")
+    return 0
+
+
 def cmd_audit(args, settings) -> int:
     from . import audit_run
 
@@ -497,6 +535,17 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--trials", type=int, default=25, help="Optuna trials per model family")
     sp.add_argument("--seed", type=int, default=0)
 
+    sp = sub.add_parser("weather", help="geocode cricket venues and fetch match-day weather from Open-Meteo (cached, throttled)")
+    sp.add_argument("--skip-geocode", action="store_true")
+
+    sp = sub.add_parser("ablate", help="Phase 3: what do the new feature groups add on the untouched test window")
+    sp.add_argument("--tasks", default="football,basketball", help="football,basketball,cricket-T20,cricket-ODI,cricket-Test")
+    sp.add_argument("--trials", type=int, default=15)
+    sp.add_argument("--seed", type=int, default=0)
+    sp.add_argument("--calibrated", action="store_true", help="cricket: compare the existing model and new-feature models with per-segment temperature fitted on validation for both")
+    sp.add_argument("--groups", default="recent", help="with --calibrated: feature groups to add (comma separated)")
+    sp.add_argument("--weather", action="store_true", help="cricket: include the weather group (run `weather` first)")
+
     sp = sub.add_parser("audit", help="measured audit: data quality, leakage probes, overfitting, calibration, staleness")
     sp.add_argument("--quick", action="store_true", help="fewer probes (faster)")
 
@@ -530,6 +579,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_cricsheet(args, load_settings())
     if args.cmd == "tune":
         return cmd_tune(args, load_settings())
+    if args.cmd == "weather":
+        return cmd_weather(args, load_settings())
+    if args.cmd == "ablate":
+        return cmd_ablate(args, load_settings())
     if args.cmd == "compare":
         return cmd_compare(args, load_settings())
     if args.cmd == "audit":

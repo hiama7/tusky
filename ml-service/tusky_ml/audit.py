@@ -103,18 +103,23 @@ def _cricket_cut(data: cdata.CricketData, match_id: int) -> cdata.CricketData:
     )
 
 
-def cricket_causal_probe(data: cdata.CricketData, n: int = 6, seed: int = 0) -> dict:
-    full = cfeat.build_features(data).set_index("match_id")
-    cols = [c for c in full.columns if c.startswith(("pre_xi_", "post_xi_", "fi_", "fi1_", "fi2_"))
-            or c in cfeat.POST_FEATURES]
-    cols = [c for c in cols if c not in ("fi_bat_first",) or True]
-    eligible = full[(full["toss_a"] != 0) & full["label"].notna()]
-    eligible = eligible.iloc[400:]
+def cricket_causal_probe(data: cdata.CricketData, n: int = 6, seed: int = 0, builder=None, columns: list[str] | None = None,
+                         min_index: int = 400) -> dict:
+    """Causal probe for cricket. `builder(CricketData)` must return a frame with `match_id` and
+    `columns`; the default is the core replay with its pre/post-toss and first-innings features."""
+    builder = builder or cfeat.build_features
+    full = builder(data).set_index("match_id")
+    if columns is None:
+        columns = [c for c in full.columns if c.startswith(("pre_xi_", "post_xi_", "fi_", "fi1_", "fi2_")) or c in cfeat.POST_FEATURES]
+    cols = columns
+    ms = data.matches.sort_values(["start_time", "match_id"], kind="stable")
+    ids = ms.loc[ms["toss_winner"].notna() & ms["winner"].notna(), "match_id"].to_numpy()
+    eligible = [i for i in ids[min_index:] if i in full.index]
     rng = np.random.default_rng(seed)
-    picks = rng.choice(eligible.index.to_numpy(), size=min(n, len(eligible)), replace=False)
+    picks = rng.choice(np.array(eligible), size=min(n, len(eligible)), replace=False)
     worst, failures = 0.0, []
     for mid in picks:
-        rebuilt = cfeat.build_features(_cricket_cut(data, int(mid))).set_index("match_id").loc[mid]
+        rebuilt = builder(_cricket_cut(data, int(mid))).set_index("match_id").loc[mid]
         a = rebuilt[cols].astype(float).fillna(-9999.0)
         b = full.loc[mid, cols].astype(float).fillna(-9999.0)
         diff = (a - b).abs()

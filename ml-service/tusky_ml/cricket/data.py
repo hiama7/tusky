@@ -38,7 +38,8 @@ def load(conn: psycopg.Connection, formats: tuple[str, ...] = MODEL_FORMATS) -> 
                    coalesce(m.raw->>'team_type', 'unknown') as team_type,
                    m.venue_id, coalesce(m.city, v.city) as city,
                    m.toss_winner_team_id as toss_winner, m.toss_decision,
-                   m.winner_team_id as winner, m.result_type
+                   m.winner_team_id as winner, m.result_type,
+                   m.raw->'event'->>'name' as event_name, m.raw->'event'->>'stage' as event_stage
             from matches m
             join sports s on s.id = m.sport_id and s.code = 'cricket'
             join teams t1 on t1.id = m.home_team_id
@@ -49,7 +50,7 @@ def load(conn: psycopg.Connection, formats: tuple[str, ...] = MODEL_FORMATS) -> 
             (fmts,),
         ).fetchall(),
         columns=["match_id", "start_time", "format", "status", "team1", "team2", "gender", "team_type",
-                 "venue_id", "city", "toss_winner", "toss_decision", "winner", "result_type"],
+                 "venue_id", "city", "toss_winner", "toss_decision", "winner", "result_type", "event_name", "event_stage"],
     )
     ids = matches["match_id"].astype(int).tolist()
     innings = pd.DataFrame(

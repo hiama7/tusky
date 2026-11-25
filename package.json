@@ -30,6 +30,8 @@
     "ml:predict": "node ml-service/run.mjs predict",
     "ml:evaluate": "node ml-service/run.mjs evaluate",
     "ml:audit": "node ml-service/run.mjs audit",
+    "ml:ablate": "node ml-service/run.mjs ablate",
+    "ml:weather": "node ml-service/run.mjs weather",
     "ml:run": "node ml-service/run.mjs run",
     "ml:test": "node ml-service/run.mjs pytest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
