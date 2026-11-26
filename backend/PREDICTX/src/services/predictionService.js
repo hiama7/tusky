@@ -58,7 +58,10 @@ export async function predictionForViewer(matchId, userId) {
   if (!match) throw ApiError.notFound('Match not found');
   const published = match.prediction?.publicationStatus === 'PUBLISHED';
   const reason = userId ? await accessFor(userId, match) : null;
-  if (!published) return { ...S.lockedPrediction(match, { available: false }), unlocked: Boolean(reason), unlockReason: reason };
+  // Buyers/trial users keep access if an admin later unpublishes the prediction (it only stops new sales).
+  // Drafts and subscription access never reveal unpublished content.
+  const keepsAccess = (reason === 'purchase' || reason === 'trial') && match.prediction?.publishedAt;
+  if (!published && !keepsAccess) return { ...S.lockedPrediction(match, { available: false }), unlocked: Boolean(reason), unlockReason: reason };
   if (!reason) return S.lockedPrediction(match, { available: true });
   return { locked: false, unlockReason: reason, prediction: S.prediction(match.prediction) };
 }

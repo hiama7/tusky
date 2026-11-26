@@ -21,7 +21,7 @@ const COOKIE_PATH = { user: '/api/auth', admin: '/api/auth/admin' };
 const RESET_TTL_MIN = 30;
 
 // Used to keep login timing similar whether or not the email exists.
-const DUMMY_HASH = bcrypt.hashSync('timing-equaliser-not-a-password', 10);
+const DUMMY_HASH = bcrypt.hashSync('timing-equaliser-not-a-password', env.BCRYPT_ROUNDS);
 
 export const hashPassword = (pw) => bcrypt.hash(pw, env.BCRYPT_ROUNDS);
 
