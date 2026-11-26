@@ -3,16 +3,15 @@ import { useState } from 'react';
 import MatchCard from '../../components/match/MatchCard';
 import SportsGrid from '../../components/sections/SportsGrid';
 import { Chips, CardSkeleton, EmptyState } from '../../components/ui';
-import { SPORTS } from '../../data/demo/sports';
 import { useAsync } from '../../hooks/useAsync';
-import { getMatches } from '../../services/matches';
-import { isUnlocked } from '../../services/purchases';
+import { getMatches, getSports } from '../../services/matches';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Sports() {
   const [sport, setSport] = useState('all');
-  const { user } = useAuth();
-  const { data, loading } = useAsync(() => getMatches({ sport, upcomingOnly: true }), [sport]);
+  const { user } = useAuth(); // unlock badges depend on who is logged in
+  const { data, loading } = useAsync(() => getMatches({ sport, upcoming: true }), [sport, user?.id]);
+  const { data: sports } = useAsync(() => getSports(), []);
   return (
     <div className="mx-auto max-w-7xl px-4 pt-28 md:px-6">
       <p className="eyebrow">Sports</p>
@@ -21,9 +20,9 @@ export default function Sports() {
       <div className="mt-10"><SportsGrid /></div>
 
       <h2 className="mt-16 text-2xl font-bold">Upcoming matches</h2>
-      <div className="my-5"><Chips options={[{ value: 'all', label: 'All sports' }, ...SPORTS.map((s) => ({ value: s.id, label: s.name }))]} value={sport} onChange={setSport} /></div>
+      <div className="my-5"><Chips options={[{ value: 'all', label: 'All sports' }, ...(sports || []).map((s) => ({ value: s.id, label: s.name }))]} value={sport} onChange={setSport} /></div>
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {loading ? <CardSkeleton count={3} className="h-72" /> : data?.length ? data.map((m) => <MatchCard key={m.id} match={m} unlocked={user ? isUnlocked(user.id, m.id) : false} />) : <div className="sm:col-span-2 lg:col-span-3"><EmptyState title="No upcoming matches for this sport yet" /></div>}
+        {loading ? <CardSkeleton count={3} className="h-72" /> : data?.length ? data.map((m) => <MatchCard key={m.id} match={m} />) : <div className="sm:col-span-2 lg:col-span-3"><EmptyState title="No upcoming matches for this sport yet" /></div>}
       </div>
     </div>
   );

@@ -25,7 +25,7 @@ export default function AuthLayout({ title, subtitle, children, admin = false, p
             <div className="mt-3 space-y-2"><ProbBar value={admin ? 72 : 54} /><ProbBar value={admin ? 48 : 46} color="#8657FF" delay={150} /></div>
           </div>
         </div>
-        <p className="relative text-xs text-muted">© TUSKY — Stage 1 frontend demo</p>
+        <p className="relative text-xs text-muted">© TUSKY — sports analytics</p>
       </div>
 
       {/* Form side */}

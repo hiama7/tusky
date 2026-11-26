@@ -1,4 +1,4 @@
-// Client-side form validation. Stage 2 must repeat these checks in PHP —
+// Client-side form validation for quick feedback. The API repeats every check —
 // browser validation is for user experience only, never for security.
 export const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
 export const isPhone = (v) => /^[6-9]\d{9}$/.test(v.replace(/[\s-]/g, '').replace(/^\+?91/, ''));

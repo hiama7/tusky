@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/layout/AuthLayout';
-import { DemoBanner, Field } from '../../components/ui';
+import { Field } from '../../components/ui';
 import PasswordInput from '../../components/ui/PasswordInput';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -44,7 +44,9 @@ export default function Register() {
       toast.success('Account created. Please log in to continue.', 'Registration complete');
       navigate('/login', { state: { email: form.email } });
     } catch (err) {
-      setErrors({ form: err.message });
+      // Map server field names back to this form's fields.
+      const f = err.fields || {};
+      setErrors({ form: err.message, name: f.fullName, email: f.email, phone: f.phone, password: f.password, confirm: f.confirmPassword });
       setBusy(false);
     }
   }
@@ -53,7 +55,6 @@ export default function Register() {
 
   return (
     <AuthLayout title="Create your account" subtitle="Join TUSKY and get your first prediction free.">
-      <DemoBanner className="mb-6"><b>Demo registration.</b> Your details are saved only in this browser’s localStorage and are not sent anywhere. Real accounts arrive in Stage 2.</DemoBanner>
       <form onSubmit={submit} noValidate className="space-y-4">
         {errors.form && <p className="rounded-lg bg-red/10 px-3 py-2 text-sm text-red" role="alert">{errors.form}</p>}
         <Field label="Full Name" error={errors.name}>

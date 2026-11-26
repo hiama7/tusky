@@ -2,11 +2,11 @@
 import { Link } from 'react-router-dom';
 import { Lock, Unlock, CalendarDays, Clock3, Trophy } from 'lucide-react';
 import { TeamCrest } from '../ui';
-import { sportById } from '../../data/demo/sports';
 import { cx, fmtDate, fmtTime, inr, startsIn } from '../../utils/format';
 
-export default function MatchCard({ match, unlocked = false, to, compact = false }) {
-  const sport = sportById(match.sport);
+/** `unlocked` defaults to the server-provided flag on the match. */
+export default function MatchCard({ match, unlocked = match.unlocked, to, compact = false }) {
+  const sport = { name: match.sportName, color: match.sportColor };
   const href = to ?? `/user/match/${match.id}`;
   return (
     <article className="glass card-lift group relative flex flex-col overflow-hidden page-enter">

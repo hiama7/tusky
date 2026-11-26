@@ -2,12 +2,28 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-// base: './' keeps asset paths relative, so the built dist/ folder
-// can be opened with VS Code Live Server or dropped into a PHP project in Stage 2.
+// The React app calls the API on the same origin (/api, /uploads). In development
+// Vite forwards those requests to the Express backend, so the refresh-token cookie
+// stays first-party (SameSite=Strict) and no CORS is involved.
+const API_TARGET = process.env.VITE_API_PROXY || 'http://localhost:5000';
+
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
-  server: { port: 5173 },
-  // Main bundle includes React, Chart.js and the icon set (~170 KB gzipped); admin pages are split out.
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': { target: API_TARGET, changeOrigin: false },
+      '/uploads': { target: API_TARGET, changeOrigin: false },
+    },
+  },
+  preview: {
+    port: 4173,
+    proxy: {
+      '/api': { target: API_TARGET, changeOrigin: false },
+      '/uploads': { target: API_TARGET, changeOrigin: false },
+    },
+  },
+  // Main bundle includes React, Chart.js and the icon set; admin pages are split out.
   build: { chunkSizeWarningLimit: 700 },
 });

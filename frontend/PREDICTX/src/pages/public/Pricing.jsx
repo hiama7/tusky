@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Gift } from 'lucide-react';
 import PricingPlans from '../../components/sections/PricingPlans';
-import { DemoBanner } from '../../components/ui';
 
 const FAQ = [
-  ['Does buying one prediction unlock others?', 'No. Each match is unlocked independently. Subscriptions unlock every prediction while they are active.'],
+  ['Does buying one prediction unlock others?', 'No. Each match is unlocked independently. A subscription unlocks predictions for the sports its plan covers while it is active.'],
   ['What is the free trial?', 'Every new account can unlock one match prediction of their choice for free, once.'],
-  ['Which payment methods are supported?', 'UPI, cards, net banking and the TUSKY wallet. In this Stage 1 demo all payments are simulated.'],
+  ['Which payment methods are supported?', 'UPI, cards and net banking through Razorpay, plus your TUSKY wallet balance.'],
   ['Are predictions guaranteed?', 'No. Predictions are probabilistic analysis for entertainment and research, not guarantees.'],
 ];
 
@@ -18,7 +17,6 @@ export default function Pricing() {
         <h1 className="section-title mt-2">Pay per match or go unlimited</h1>
         <p className="section-sub mx-auto">Transparent pricing in Indian Rupees. Cancel anytime.</p>
       </div>
-      <div className="mx-auto mt-8 max-w-3xl"><DemoBanner>Stage 1 demo: plans and prices are sample values and payments are simulated — no real money is charged.</DemoBanner></div>
       <div className="mt-10"><PricingPlans /></div>
 
       <div className="glass mt-10 flex flex-col items-center justify-between gap-4 p-6 md:flex-row">

@@ -33,9 +33,9 @@ function NotificationsMenu({ userId }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const ref = useClickOutside(close);
-  const { data = [] } = useAsync(() => getNotifications(userId), [userId]);
-  const list = data || [];
-  const unread = list.filter((n) => !n.read).length;
+  const { data } = useAsync(() => getNotifications(), [userId]);
+  const list = data?.items || [];
+  const unread = data?.unread || 0;
   const dot = { success: 'bg-green', info: 'bg-blue', warning: 'bg-orange', error: 'bg-red' };
   return (
     <div className="relative" ref={ref}>
@@ -47,7 +47,7 @@ function NotificationsMenu({ userId }) {
         <div className="dropdown w-[min(22rem,calc(100vw-2rem))]">
           <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
             <p className="text-sm font-semibold">Notifications</p>
-            <button className="text-xs text-blue hover:underline disabled:opacity-40" disabled={!unread} onClick={() => markAllRead(userId)}>Mark all read</button>
+            <button className="text-xs text-blue hover:underline disabled:opacity-40" disabled={!unread} onClick={() => markAllRead()}>Mark all read</button>
           </div>
           <ul className="max-h-80 overflow-y-auto">
             {list.map((n) => (
@@ -68,18 +68,19 @@ function NotificationsMenu({ userId }) {
 }
 
 export default function UserLayout() {
-  const { user, logout } = useAuth();
+  const { user, ready, logout } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: trial } = useAsync(() => (user ? getTrial(user.id) : null), [user?.id]);
+  const { data: trial } = useAsync(() => (user ? getTrial() : null), [user?.id]);
 
-  // Demo route guard. Stage 2: the PHP session decides this server-side.
+  // Route guard for the UI only — every API call is authorised again on the server.
+  if (!ready) return <div className="flex min-h-screen items-center justify-center"><span className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
 
   async function handleLogout() {
     await logout();
-    toast.info('You have been logged out of the demo account.');
+    toast.info('You have been logged out.');
     navigate('/login');
   }
 
@@ -105,7 +106,7 @@ export default function UserLayout() {
           <p className="mt-1 text-xs text-muted">Your first prediction is on us — activate it now.</p>
         </Link>
       ) : (
-        <p className="text-center text-[11px] text-muted">Demo account · data stored in this browser only</p>
+        <p className="text-center text-[11px] text-muted">Signed in as {user.email}</p>
       )}
     />
   );

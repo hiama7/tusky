@@ -7,7 +7,7 @@ export default function Transactions() {
   const { user } = useAuth();
   return (
     <>
-      <PageHeader title="Transaction History" subtitle="All demo payments, subscriptions and wallet top-ups." actions={<Link to="/user/wallet" className="btn-ghost">Open wallet</Link>} />
+      <PageHeader title="Transaction History" subtitle="All your payments, subscriptions and wallet top-ups." actions={<Link to="/user/wallet" className="btn-ghost">Open wallet</Link>} />
       <TransactionTable userId={user.id} />
     </>
   );

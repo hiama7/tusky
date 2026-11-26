@@ -1,10 +1,9 @@
 // Public site shell: sticky glass navbar (with mobile drawer) + footer.
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Mail, Phone, MapPin, LayoutDashboard } from 'lucide-react';
+import { Menu, X, Mail, MapPin, LayoutDashboard } from 'lucide-react';
 import { Logo } from '../ui';
 import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
 import { cx } from '../../utils/format';
 
 const NAV = [
@@ -75,20 +74,13 @@ function Navbar() {
 }
 
 function Footer() {
-  const toast = useToast();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const { user } = useAuth();
   const cols = [
     { title: 'Platform', links: [['Predictions', '/user/predictions'], ['Sports', '/sports'], ['Pricing', '/pricing'], ['Free Trial', '/user/free-trial']] },
     { title: 'Company', links: [['About', '/about'], ['News', '/news'], ['Admin Login', '/admin/login'], ['Create Account', '/register']] },
     { title: 'Account', links: [['Login', '/login'], ['Dashboard', '/user/dashboard'], ['My Purchases', '/user/purchases'], ['Wallet', '/user/wallet']] },
   ];
-  function subscribe(e) {
-    e.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(email)) return toast.error('Please enter a valid email address.');
-    toast.success('Demo only — newsletter sign-ups will be stored in Stage 2.', 'Subscribed');
-    setEmail('');
-  }
   return (
     <footer className="relative mt-24 border-t border-white/5 bg-ink-2/60">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-2 md:px-6 lg:grid-cols-5">
@@ -97,8 +89,7 @@ function Footer() {
           <p className="mt-4 max-w-sm text-sm text-muted">AI-powered sports analytics, match predictions and in-depth performance insights — built for fans who like to think ahead.</p>
           <ul className="mt-5 space-y-2 text-sm text-muted">
             <li className="flex items-center gap-2"><Mail className="h-4 w-4" /> support@tusky.app</li>
-            <li className="flex items-center gap-2"><Phone className="h-4 w-4" /> +91 00000 00000 (sample)</li>
-            <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Bengaluru, India</li>
+                        <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Bengaluru, India</li>
           </ul>
         </div>
         {cols.map((c) => (
@@ -111,15 +102,14 @@ function Footer() {
         ))}
       </div>
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <form onSubmit={subscribe} className="glass flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
-          <p className="flex-1 text-sm"><b>Get match-day insights</b> <span className="text-muted">in your inbox.</span></p>
-          <input className="input sm:max-w-xs" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email address" />
-          <button className="btn-primary" type="submit">Subscribe</button>
-        </form>
+        <div className="glass flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+          <p className="flex-1 text-sm"><b>Your first prediction is free.</b> <span className="text-muted">Create an account and pick any upcoming match.</span></p>
+          <Link to={user ? '/user/free-trial' : '/register'} className="btn-primary">{user ? 'Use my free trial' : 'Create free account'}</Link>
+        </div>
       </div>
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-8 text-xs text-muted md:flex-row md:justify-between md:px-6">
-        <p>© {new Date().getFullYear()} TUSKY. Stage 1 frontend demo — predictions are for entertainment & analysis only.</p>
-        <p>Team names and figures shown are sample content.</p>
+        <p>© {new Date().getFullYear()} TUSKY. Predictions are probabilistic analysis for entertainment & research only.</p>
+        <p>Content marked “Sample” is demonstration data.</p>
       </div>
     </footer>
   );

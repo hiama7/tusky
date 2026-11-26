@@ -7,7 +7,7 @@ import { ToastProvider } from './context/ToastContext';
 import './styles/style.css';
 
 // HashRouter keeps every page reachable when the built site is served as static
-// files (VS Code Live Server, shared hosting). Stage 2 can switch to BrowserRouter
+// files behind any static host. Switching to BrowserRouter would need a server
 // with an Apache rewrite rule if clean URLs are preferred.
 createRoot(document.getElementById('root')).render(
   <StrictMode>

@@ -1,5 +1,5 @@
-// Route map. Paths mirror the Stage 1 brief's file names
-// (index.html → "/", user/dashboard.html → "/user/dashboard", …).
+// Route map. Client-side guards only control what is shown — every API call is
+// authenticated and authorised again on the server.
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import PublicLayout from './components/layout/PublicLayout';
@@ -12,6 +12,7 @@ import News from './pages/public/News';
 import Pricing from './pages/public/Pricing';
 import Login from './pages/public/Login';
 import Register from './pages/public/Register';
+import ResetPassword from './pages/public/ResetPassword';
 import NotFound from './pages/public/NotFound';
 
 import Dashboard from './pages/user/Dashboard';
@@ -56,8 +57,9 @@ export default function App() {
       </Route>
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
+      <Route path="reset-password" element={<ResetPassword />} />
 
-      {/* User area (demo session required) */}
+      {/* User area (login required) */}
       <Route path="user" element={<UserLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
@@ -65,7 +67,7 @@ export default function App() {
         <Route path="matches" element={<Matches />} />
         <Route path="predictions" element={<Predictions />} />
         <Route path="match/:id" element={<MatchDetails />} />
-        <Route path="match-details" element={<Navigate to="/user/match/m101" replace />} />
+        <Route path="match-details" element={<Navigate to="/user/matches" replace />} />
         <Route path="news" element={<UserNews />} />
         <Route path="purchases" element={<Purchases />} />
         <Route path="subscription" element={<Subscription />} />
@@ -76,7 +78,7 @@ export default function App() {
         <Route path="settings" element={<Profile tab="settings" />} />
       </Route>
 
-      {/* Admin area (separate demo session) */}
+      {/* Admin area (separate admin session) */}
       <Route path="admin/login" element={<AdminLogin />} />
       <Route path="admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />

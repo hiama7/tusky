@@ -3,14 +3,13 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles, TrendingUp, Activity, Target, UserPlus, Trophy, CalendarCheck, Unlock, Star, Quote, ShieldCheck, Cpu, LineChart } from 'lucide-react';
-import { AnimatedNumber, CardSkeleton, DemoTag, ProbBar, TeamCrest } from '../../components/ui';
+import { AnimatedNumber, CardSkeleton, DemoTag, EmptyState, ProbBar, TeamCrest } from '../../components/ui';
 import MatchCard from '../../components/match/MatchCard';
 import SportsGrid from '../../components/sections/SportsGrid';
 import PricingPlans from '../../components/sections/PricingPlans';
-import { TESTIMONIALS } from '../../data/demo/testimonials';
+import { TESTIMONIALS } from '../../content/testimonials';
 import { useAsync } from '../../hooks/useAsync';
 import { getMatches } from '../../services/matches';
-import { isUnlocked } from '../../services/purchases';
 import { useAuth } from '../../context/AuthContext';
 
 function Hero() {
@@ -108,7 +107,7 @@ function Section({ id, eyebrow, title, sub, children, action }) {
 
 export default function Home({ scrollTo }) {
   const { user } = useAuth();
-  const { data: matches, loading } = useAsync(() => getMatches({ upcomingOnly: true }), []);
+  const { data: matches, loading } = useAsync(() => getMatches({ upcoming: true }), [user?.id]);
   const featured = (matches || []).filter((m) => m.featured).slice(0, 6);
 
   useEffect(() => {
@@ -139,7 +138,7 @@ export default function Home({ scrollTo }) {
 
       <Section eyebrow="Featured" title="Upcoming featured matches" sub="Every prediction is locked until you unlock it — individually, with a subscription, or with your free trial." action={<Link to="/user/matches" className="btn-ghost">View all matches <ArrowRight className="h-4 w-4" /></Link>}>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {loading ? <CardSkeleton count={6} className="h-72" /> : featured.map((m) => <MatchCard key={m.id} match={m} unlocked={user ? isUnlocked(user.id, m.id) : false} />)}
+          {loading ? <CardSkeleton count={6} className="h-72" /> : featured.length ? featured.map((m) => <MatchCard key={m.id} match={m} />) : <div className="sm:col-span-2 lg:col-span-3"><EmptyState title="No featured matches right now" text="Check back soon — new fixtures are added regularly." /></div>}
         </div>
       </Section>
 

@@ -22,7 +22,7 @@ export function Logo({ to = '/', admin = false, className = '' }) {
 /* ---------- Demo labels ---------- */
 export function DemoTag({ children = 'Demo data', className = '' }) {
   return (
-    <span className={cx('badge-orange', className)} title="Sample content for the Stage 1 frontend demo">
+    <span className={cx('badge-orange', className)} title="Demonstration content — not real data">
       <FlaskConical className="h-3 w-3" /> {children}
     </span>
   );
@@ -232,6 +232,9 @@ const STATUS_TONE = {
   Active: 'badge-green', Success: 'badge-green', published: 'badge-green', Published: 'badge-green', used: 'badge-muted',
   Pending: 'badge-orange', draft: 'badge-orange', Trial: 'badge-purple', available: 'badge-green',
   Expired: 'badge-muted', None: 'badge-muted', Cancelled: 'badge-red', Failed: 'badge-red', Blocked: 'badge-red', Refunded: 'badge-blue',
+  'Partially refunded': 'badge-blue', Draft: 'badge-orange', Unpublished: 'badge-muted', Scheduled: 'badge-purple', Archived: 'badge-muted',
+  UPCOMING: 'badge-blue', LIVE: 'badge-red', COMPLETED: 'badge-green', CANCELLED: 'badge-muted', POSTPONED: 'badge-orange',
+  PUBLISHED: 'badge-green', DRAFT: 'badge-orange', UNPUBLISHED: 'badge-muted', Available: 'badge-green', Used: 'badge-muted',
 };
 export const StatusBadge = ({ status }) => <span className={STATUS_TONE[status] || 'badge-muted'}>{status}</span>;
 

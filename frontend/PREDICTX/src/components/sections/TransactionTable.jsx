@@ -7,7 +7,7 @@ import { fmtDateTime, inr } from '../../utils/format';
 
 export default function TransactionTable({ userId }) {
   const [type, setType] = useState('all');
-  const { data, loading } = useAsync(() => getUserTransactions(userId), [userId]);
+  const { data, loading } = useAsync(() => getUserTransactions(), [userId]);
   const rows = (data || []).filter((t) => type === 'all' || t.type === type);
   return (
     <>

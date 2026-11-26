@@ -2,7 +2,8 @@
 // Match prediction page — the core feature.
 // Locked: values are blurred behind an "Unlock" overlay.
 // Unlocked (purchase / free trial / subscription): full analysis + chart.
-// Each match's unlock status is independent (see services/purchases.js).
+// The SERVER decides whether the viewer may see the prediction: when locked,
+// the API returns only { locked, price, available } — no probabilities or analysis.
 // =========================================================
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -10,21 +11,19 @@ import {
   Lock, MapPin, CalendarDays, Clock3, Trophy, ArrowLeft, Gift, Crown, Sparkles, ShieldAlert,
   Users, BarChart3, Swords, Lightbulb, Percent, CheckCircle2, Unlock, Gauge,
 } from 'lucide-react';
-import { DemoBanner, DemoTag, EmptyState, Modal, ProbBar, Skeleton, TeamCrest } from '../../components/ui';
+import { DemoTag, EmptyState, Modal, ProbBar, Skeleton, TeamCrest } from '../../components/ui';
 import ProbabilityChart from '../../components/match/ProbabilityChart';
 import PaymentModal from '../../components/match/PaymentModal';
-import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useAsync } from '../../hooks/useAsync';
 import { getMatch, getPrediction } from '../../services/matches';
-import { getWalletSync, purchaseMatch, unlockReason } from '../../services/purchases';
-import { activateTrial, getTrialSync } from '../../services/trial';
-import { sportById } from '../../data/demo/sports';
+import { getWallet } from '../../services/purchases';
+import { activateTrial, getTrial } from '../../services/trial';
 import { cx, fmtDate, fmtTime, inr, startsIn } from '../../utils/format';
 
-/** Placeholder content rendered under the blur so nothing real is exposed. */
+/** Placeholder rendered under the blur — the real values are never sent to a locked viewer. */
 const LOCKED_PLACEHOLDER = {
-  probA: 50, probB: 50, confidence: '—', summary: 'Unlock this match to read the full analysis written by our model.',
+  probA: 50, probB: 50, probDraw: null, confidence: '—', summary: 'Unlock this match to read the full analysis for this fixture.',
   teamA: { form: ['?', '?', '?', '?', '?'], strengths: ['Hidden', 'Hidden'], weaknesses: ['Hidden'] },
   teamB: { form: ['?', '?', '?', '?', '?'], strengths: ['Hidden', 'Hidden'], weaknesses: ['Hidden'] },
   players: [{ name: 'Player ••••', team: 'A', stat: '•• · ••', rating: 80 }, { name: 'Player ••••', team: 'A', stat: '•• · ••', rating: 70 }, { name: 'Player ••••', team: 'B', stat: '•• · ••', rating: 75 }, { name: 'Player ••••', team: 'B', stat: '•• · ••', rating: 65 }],
@@ -60,13 +59,13 @@ function Analysis({ match, p, locked }) {
           {[['teamA', match.teamA], ['teamB', match.teamB]].map(([key, team]) => (
             <div key={key}>
               <div className="flex items-center justify-between">
-                <p className="flex items-center gap-2 font-medium"><TeamCrest team={team} size="sm" /> {team.name}</p>
+                <div className="flex items-center gap-2 font-medium"><TeamCrest team={team} size="sm" /> {team.name}</div>
                 <FormDots form={p[key].form} />
               </div>
               <p className="mt-4 text-xs uppercase tracking-wider text-muted">Strengths</p>
-              <ul className="mt-2 space-y-1.5 text-sm">{p[key].strengths.map((s) => <li key={s} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green" />{s}</li>)}</ul>
+              <ul className="mt-2 space-y-1.5 text-sm">{p[key].strengths.map((s, i) => <li key={i} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green" />{s}</li>)}</ul>
               <p className="mt-4 text-xs uppercase tracking-wider text-muted">Watch-outs</p>
-              <ul className="mt-2 space-y-1.5 text-sm">{p[key].weaknesses.map((s) => <li key={s} className="flex gap-2"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-orange" />{s}</li>)}</ul>
+              <ul className="mt-2 space-y-1.5 text-sm">{p[key].weaknesses.map((s, i) => <li key={i} className="flex gap-2"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-orange" />{s}</li>)}</ul>
             </div>
           ))}
         </div>
@@ -116,7 +115,6 @@ function Analysis({ match, p, locked }) {
 
 export default function MatchDetails() {
   const { id } = useParams();
-  const { user } = useAuth();
   const toast = useToast();
   const [payOpen, setPayOpen] = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
@@ -124,25 +122,25 @@ export default function MatchDetails() {
   const [justUnlocked, setJustUnlocked] = useState(false);
 
   const { data, loading, error } = useAsync(async () => {
-    const match = await getMatch(id);
-    const prediction = await getPrediction(id);
-    return { match, prediction };
+    const [match, access, trial, wallet] = await Promise.all([getMatch(id), getPrediction(id), getTrial(), getWallet()]);
+    return { match, access, trial, wallet };
   }, [id]);
 
   if (loading) return <div className="space-y-5"><Skeleton className="h-56 rounded-2xl" /><Skeleton className="h-72 rounded-2xl" /><Skeleton className="h-64 rounded-2xl" /></div>;
-  if (error || !data) return <EmptyState title="Match not found" text="It may have been removed by an administrator." action={<Link to="/user/matches" className="btn-primary">Browse matches</Link>} />;
+  if (error || !data) return <EmptyState title="Match not found" text={error?.status === 404 ? 'It may have been removed by an administrator.' : error?.message} action={<Link to="/user/matches" className="btn-primary">Browse matches</Link>} />;
 
-  const { match, prediction } = data;
-  const sport = sportById(match.sport);
-  const reason = unlockReason(user.id, match.id); // 'purchase' | 'trial' | 'subscription' | null
-  const unlocked = !!reason;
-  const trial = getTrialSync(user.id);
-  const p = unlocked && prediction ? prediction : LOCKED_PLACEHOLDER;
+  const { match, access, trial, wallet } = data;
+  const unlocked = access.locked === false;
+  const reason = access.unlockReason; // 'purchase' | 'trial' | 'subscription'
+  const available = unlocked || access.available;
+  const p = unlocked ? access.prediction : LOCKED_PLACEHOLDER;
+  const threeWay = unlocked && p.probDraw !== null;
+  const onSale = ['UPCOMING', 'LIVE', 'POSTPONED'].includes(match.status);
 
   async function confirmTrial() {
     setTrialBusy(true);
     try {
-      await activateTrial(user, match);
+      await activateTrial(match.id);
       toast.success(`${match.teamA.name} vs ${match.teamB.name} unlocked with your free trial.`, 'Free trial used');
       setTrialOpen(false);
       setJustUnlocked(true);
@@ -164,9 +162,10 @@ export default function MatchDetails() {
         <div className="pointer-events-none absolute inset-0 opacity-30" style={{ background: `radial-gradient(500px 200px at 10% 0%, ${match.teamA.color}55, transparent), radial-gradient(500px 200px at 90% 100%, ${match.teamB.color}55, transparent)` }} />
         <div className="relative">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="badge-muted" style={{ color: sport?.color }}>{sport?.name}</span>
+            <span className="badge-muted" style={{ color: match.sportColor }}>{match.sportName}</span>
             <span className="badge-blue">{match.tournament}</span>
-            <span className="badge-muted">{startsIn(match.date)}</span>
+            <span className="badge-muted">{match.status === 'UPCOMING' ? startsIn(match.date) : match.status}</span>
+            {match.isDemo && <DemoTag>Sample fixture</DemoTag>}
             {unlocked && <span className="badge-green"><Unlock className="h-3 w-3" /> {reasonLabel}</span>}
           </div>
           <div className="mt-8 flex items-center justify-between gap-4">
@@ -186,10 +185,13 @@ export default function MatchDetails() {
             <p className="flex items-center gap-2"><Clock3 className="h-4 w-4" /> {fmtTime(match.date)} IST</p>
             <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {match.venue}</p>
           </div>
+          {match.result && (
+            <p className="mt-4 rounded-xl bg-green/10 px-4 py-3 text-sm text-green"><b>Result:</b> {match.result.description}{match.result.score ? ` (${match.result.score})` : ''}</p>
+          )}
         </div>
       </section>
 
-      {!prediction ? (
+      {!available ? (
         <EmptyState icon={Percent} title="Prediction coming soon" text="Our analysts haven’t published a prediction for this match yet. Check back closer to the start time." />
       ) : (
         <>
@@ -203,6 +205,12 @@ export default function MatchDetails() {
                     <div className="mb-2 flex items-end justify-between"><span className="font-semibold">{match.teamA.name} Winning Probability</span><span className="font-display text-3xl font-bold" style={{ color: match.teamA.color }}>{p.probA}%</span></div>
                     <ProbBar value={p.probA} color={match.teamA.color} />
                   </div>
+                  {threeWay && (
+                    <div>
+                      <div className="mb-2 flex items-end justify-between"><span className="font-semibold">Draw</span><span className="font-display text-3xl font-bold text-muted">{p.probDraw}%</span></div>
+                      <ProbBar value={p.probDraw} color="#929CB1" delay={100} />
+                    </div>
+                  )}
                   <div>
                     <div className="mb-2 flex items-end justify-between"><span className="font-semibold">{match.teamB.name} Winning Probability</span><span className="font-display text-3xl font-bold" style={{ color: match.teamB.color }}>{p.probB}%</span></div>
                     <ProbBar value={p.probB} color={match.teamB.color} delay={200} />
@@ -210,9 +218,16 @@ export default function MatchDetails() {
                 </div>
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <span className="badge-purple"><Gauge className="h-3 w-3" /> Confidence: {p.confidence}</span>
-                  <DemoTag>Sample model output</DemoTag>
+                  {unlocked && <span className="badge-muted">{p.source === 'MODEL' ? `Model ${p.modelVersion || ''}` : 'Analyst prediction'} · v{p.version}</span>}
+                  {unlocked && p.isDemo && <DemoTag>Sample content</DemoTag>}
                 </div>
                 <p className="mt-4 text-sm leading-relaxed text-muted">{p.summary}</p>
+                {unlocked && (p.pitch || p.weather) && (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {p.pitch && <p className="rounded-xl bg-white/[.03] p-3 text-xs text-muted"><b className="text-white">Pitch / conditions:</b> {p.pitch}</p>}
+                    {p.weather && <p className="rounded-xl bg-white/[.03] p-3 text-xs text-muted"><b className="text-white">Weather:</b> {p.weather}</p>}
+                  </div>
+                )}
               </div>
               <div className="lg:col-span-2">
                 {unlocked ? <ProbabilityChart match={match} prediction={p} /> : <div className="mx-auto h-64 w-64 rounded-full border-[18px] border-white/10" />}
@@ -223,15 +238,19 @@ export default function MatchDetails() {
             {!unlocked && (
               <div className="absolute inset-0 flex items-center justify-center bg-ink/40 p-4">
                 <div className="glass w-full max-w-md p-6 text-center shadow-2xl animate-scale-in" style={{ background: 'linear-gradient(160deg,rgba(21,29,46,.95),rgba(16,22,37,.95))' }}>
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange/15 pulse-ring"><Lock className="h-7 w-7 text-orange" /></div>
+                  <div className="pulse-ring mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange/15"><Lock className="h-7 w-7 text-orange" /></div>
                   <h2 className="mt-4 text-xl font-bold">Unlock Detailed Match Prediction</h2>
                   <p className="mt-1 text-sm text-muted">Win probabilities, team analysis, player stats, head-to-head and insights.</p>
-                  <p className="mt-4 font-display text-4xl font-bold">{inr(match.price)}</p>
-                  <button className="btn-primary btn-lg mt-5 w-full" onClick={() => setPayOpen(true)}>UNLOCK NOW – {inr(match.price)}</button>
-                  {trial.status === 'available' && (
-                    <button className="btn-success mt-2 w-full" onClick={() => setTrialOpen(true)}><Gift className="h-4 w-4" /> Use my free trial instead</button>
-                  )}
-                  <Link to="/user/subscription" className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted hover:text-white"><Crown className="h-3.5 w-3.5" /> Or unlock everything with a subscription</Link>
+                  <p className="mt-4 font-display text-4xl font-bold">{inr(access.price)}</p>
+                  {onSale ? (
+                    <>
+                      <button className="btn-primary btn-lg mt-5 w-full" onClick={() => setPayOpen(true)}>UNLOCK NOW – {inr(access.price)}</button>
+                      {trial.status === 'available' && (
+                        <button className="btn-success mt-2 w-full" onClick={() => setTrialOpen(true)}><Gift className="h-4 w-4" /> Use my free trial instead</button>
+                      )}
+                      <Link to="/user/subscription" className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted hover:text-white"><Crown className="h-3.5 w-3.5" /> Or unlock with a subscription</Link>
+                    </>
+                  ) : <p className="mt-4 text-sm text-muted">This match is {match.status.toLowerCase()}, so its prediction is no longer on sale.</p>}
                 </div>
               </div>
             )}
@@ -243,15 +262,13 @@ export default function MatchDetails() {
             </div>
           )}
 
-          {/* Detailed analysis (blurred previews when locked) */}
+          {/* Detailed analysis (blurred placeholders when locked) */}
           <div className="relative">
             {!unlocked && <p className="mb-3 flex items-center gap-2 text-sm text-muted"><Lock className="h-4 w-4 text-orange" /> Preview — unlock to reveal team analysis, player statistics, head-to-head records and match insights.</p>}
             <Analysis match={match} p={p} locked={!unlocked} />
           </div>
 
-          <DemoBanner>
-            <b>Demo payments & predictions.</b> Payments on this page are simulated and no money is charged. Unlock status is stored in your browser for demonstration; Stage 2 verifies purchases on the server and only sends prediction data after payment. Predictions are for entertainment and analysis only.
-          </DemoBanner>
+          <p className="text-center text-xs text-muted">Predictions are probabilistic analysis for entertainment and research. They never guarantee a result.</p>
         </>
       )}
 
@@ -260,10 +277,10 @@ export default function MatchDetails() {
         onClose={() => setPayOpen(false)}
         title={`${match.teamA.name} vs ${match.teamB.name}`}
         subtitle={`${match.tournament} · ${fmtDate(match.date)}`}
-        amount={match.price}
-        walletBalance={getWalletSync(user.id)}
-        onPay={(method) => purchaseMatch(user, match, method)}
-        onSuccess={() => { setJustUnlocked(true); toast.success('Prediction unlocked! Scroll down for the full analysis.', 'Payment successful (demo)'); }}
+        amount={access.price ?? match.price}
+        walletBalance={wallet.balance}
+        item={{ type: 'PREDICTION', matchId: match.id }}
+        onSuccess={() => { setJustUnlocked(true); toast.success('Scroll down for the full analysis.', 'Prediction unlocked'); }}
       />
 
       <Modal open={trialOpen} onClose={() => !trialBusy && setTrialOpen(false)} title="Use your free trial?" size="sm"

@@ -2,7 +2,6 @@
 import { Navigate, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, CalendarRange, Target, Newspaper, Crown, ReceiptText, BarChart3, Settings, ExternalLink } from 'lucide-react';
 import DashboardShell from './DashboardShell';
-import { DemoTag } from '../ui';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -19,9 +18,10 @@ const NAV = [
 ];
 
 export default function AdminLayout() {
-  const { admin, adminLogout } = useAuth();
+  const { admin, ready, adminLogout } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  if (!ready) return <div className="flex min-h-screen items-center justify-center"><span className="spinner" /></div>;
   if (!admin) return <Navigate to="/admin/login" replace />;
 
   async function handleLogout() {
@@ -38,7 +38,6 @@ export default function AdminLayout() {
       onLogout={handleLogout}
       topbarRight={(
         <>
-          <DemoTag className="hidden sm:inline-flex">Demo admin</DemoTag>
           <a href="#/" target="_blank" rel="noreferrer" className="btn-ghost btn-sm"><ExternalLink className="h-3.5 w-3.5" /> View site</a>
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple to-blue text-xs font-bold" title={admin.email}>SA</span>
         </>
