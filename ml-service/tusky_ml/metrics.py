@@ -69,3 +69,56 @@ def summarize(probs: np.ndarray, home: np.ndarray, away: np.ndarray, three_way: 
     if three_way:
         out["rps"] = round(rps(probs, y), 5)
     return out
+
+
+# ---- calibration (Phase 4) ---------------------------------------------------------------------
+
+
+def brier_binary(p: np.ndarray, hit: np.ndarray) -> float:
+    """Conventional two-outcome Brier score, mean((p - hit)^2). `brier()` above sums over classes,
+    which for two outcomes is exactly twice this; compare with published numbers using this one."""
+    return float(np.mean((np.asarray(p, dtype=float) - np.asarray(hit, dtype=float)) ** 2))
+
+
+def expected_calibration_error(p: np.ndarray, hit: np.ndarray, bins: int = 10) -> float:
+    """Expected calibration error with equal-mass bins: the bin-size-weighted mean of
+    |average predicted - observed frequency|. Equal-mass bins keep every bin populated, unlike
+    equal-width ones where the extreme bins hold a handful of matches."""
+    p, hit = np.asarray(p, dtype=float), np.asarray(hit, dtype=float)
+    if len(p) == 0:
+        return float("nan")
+    err = 0.0
+    for chunk in np.array_split(np.argsort(p, kind="stable"), min(bins, len(p))):
+        if len(chunk):
+            err += len(chunk) / len(p) * abs(p[chunk].mean() - hit[chunk].mean())
+    return float(err)
+
+
+def classwise_ece(probs: np.ndarray, y: np.ndarray, bins: int = 10) -> float:
+    """Mean over outcome classes of the one-vs-rest ECE (for three-way football)."""
+    return float(np.mean([expected_calibration_error(probs[:, k], (y == k).astype(float), bins) for k in range(probs.shape[1])]))
+
+
+def ece_noise_floor(p: np.ndarray, bins: int = 10, sims: int = 300, seed: int = 0) -> dict:
+    """ECE that a PERFECTLY calibrated model would show on this many matches, purely from the
+    luck of finite samples: outcomes are simulated from `p` itself. An observed ECE near this
+    floor is indistinguishable from perfect calibration; far above it is real miscalibration."""
+    rng = np.random.default_rng(seed)
+    p = np.asarray(p, dtype=float)
+    vals = np.array([expected_calibration_error(p, (rng.random(len(p)) < p).astype(float), bins) for _ in range(sims)])
+    return {"mean": round(float(vals.mean()), 5), "p95": round(float(np.percentile(vals, 95)), 5)}
+
+
+def reliability_table(p: np.ndarray, hit: np.ndarray, bins: int = 10) -> list[dict]:
+    """Equal-mass reliability table: what was predicted vs what happened, with a 95% interval
+    for the observed frequency so thin bins are not over-read."""
+    p, hit = np.asarray(p, dtype=float), np.asarray(hit, dtype=float)
+    rows = []
+    for chunk in np.array_split(np.argsort(p, kind="stable"), min(bins, len(p))):
+        if not len(chunk):
+            continue
+        obs, n = float(hit[chunk].mean()), len(chunk)
+        half = 1.96 * float(np.sqrt(max(obs * (1 - obs), 1e-9) / n))
+        rows.append({"n": int(n), "predicted": round(float(p[chunk].mean()), 4), "observed": round(obs, 4),
+                     "lo": round(max(0.0, obs - half), 4), "hi": round(min(1.0, obs + half), 4)})
+    return rows

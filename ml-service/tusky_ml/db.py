@@ -45,6 +45,22 @@ def load_matches(conn: psycopg.Connection, sport: str) -> pd.DataFrame:
     return df.loc[keep, MATCH_COLUMNS].reset_index(drop=True)
 
 
+def load_match_extras(conn: psycopg.Connection, sport: str) -> pd.DataFrame:
+    """Per-match context used by the Phase 3 features: the provider's competition id and, for
+    basketball, the playoff round label (`raw->>'week'`, null in the regular season)."""
+    rows = conn.execute(
+        """
+        select m.id, c.external_id, m.raw->>'week'
+        from matches m
+        join sports s on s.id = m.sport_id
+        left join competitions c on c.id = m.competition_id
+        where s.code = %s and m.status <> 'cancelled'
+        """,
+        (sport,),
+    ).fetchall()
+    return pd.DataFrame(rows, columns=["match_id", "comp_external_id", "stage"])
+
+
 def team_names(conn: psycopg.Connection, team_ids: list[int]) -> dict[int, str]:
     if not team_ids:
         return {}

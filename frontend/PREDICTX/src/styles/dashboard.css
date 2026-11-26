@@ -1,0 +1,39 @@
+/* =========================================================
+   Dashboard shell (shared by user + admin areas)
+   ========================================================= */
+@layer components {
+  .app-shell { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    @apply fixed inset-y-0 left-0 z-40 w-64 flex flex-col border-r border-white/5 bg-ink-2/95;
+    backdrop-filter: blur(16px);
+    transition: transform .3s cubic-bezier(.2,.7,.2,1);
+  }
+  .sidebar-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted transition-all duration-200;
+  }
+  .sidebar-link:hover { @apply bg-white/5 text-white; transform: translateX(2px); }
+  .sidebar-link.active {
+    @apply text-white;
+    background: linear-gradient(90deg, rgba(56,107,255,.22), rgba(134,87,255,.08));
+    box-shadow: inset 2px 0 0 var(--color-blue);
+  }
+
+  .main-area { @apply flex-1 min-w-0; margin-left: 16rem; }
+  .topbar {
+    @apply sticky top-0 z-30 flex items-center gap-3 border-b border-white/5 bg-ink/80 px-4 md:px-8 h-16;
+    backdrop-filter: blur(14px);
+  }
+  .content { @apply px-4 md:px-8 py-6 md:py-8; }
+
+  .stat-icon { @apply flex h-11 w-11 items-center justify-center rounded-xl; }
+
+  /* Dropdown */
+  .dropdown { @apply absolute right-0 mt-2 z-50 glass shadow-2xl; animation: var(--animate-scale-in); transform-origin: top right; }
+
+  /* Timeline */
+  .timeline-item { @apply relative pl-6 pb-5; }
+  .timeline-item::before { content: ""; @apply absolute left-[5px] top-3 bottom-0 w-px bg-white/10; }
+  .timeline-item:last-child::before { display: none; }
+  .timeline-dot { @apply absolute left-0 top-1.5 h-[11px] w-[11px] rounded-full border-2 border-ink; }
+}

@@ -70,9 +70,24 @@ npm run ml:train -- --sport football                     # retrains with the sav
 
 - Team names are matched to the existing API-Sports teams by comparing dates and scores in the seasons both sources cover. Genuinely new clubs are created. Names that look like an existing club but couldn't be matched are printed as `CHECK possible duplicates`; add a line to `OVERRIDES` in `ml-service/tusky_ml/ingest/openfootball.py` if it is the same club.
 - Matches that were played but have no score in the source yet are stored as completed with `provider_status = 'NR'` and null scores. The feature replay uses them as rest days but never as results, and a later import fills in the score.
+- `npm run football:fill` fills results that openfootball lacks yet (it lags the real season by weeks) from [TheSportsDB](https://www.thesportsdb.com)'s free development key. It is deliberately slow (one request every 6 seconds), caches every response in `data/thesportsdb/`, and can be re-run safely. It only fills a missing score, never overwrites one, ignores abandoned or awarded matches, and marks each filled match with `raw.result_source = thesportsdb`. The key is public and shared, and TheSportsDB's terms require a paid subscription to publish an app, so use a licensed source before releasing a product.
 - A fixture that is already stored by another source (same two clubs, same competition, within 60 days) is never duplicated; the daily scheduler follows the same rule.
 - The results of the last full run are in [docs/reports/football-2026-11.md](docs/reports/football-2026-11.md).
 - football-data.co.uk offers CSVs with shots and odds, but its terms limit use to private individuals and exclude commercial and data-training products, so this project does not use it.
+
+## Measuring and comparing models
+
+```bash
+npm run ml:audit                               # data quality, leakage probes, overfitting, calibration, staleness (artifacts/audit.json)
+node ml-service/run.mjs compare --trials 25    # model zoo + Optuna + calibration on identical chronological windows, one untouched test window
+node ml-service/.venv/Scripts/python.exe ml-service/experiments/t20_calibration.py   # calibration methods compared on cricket T20 (run from ml-service/)
+```
+
+- Reports: [docs/reports/ml-audit-2026-11.md](docs/reports/ml-audit-2026-11.md) and [docs/reports/ml-comparison-2026-11.md](docs/reports/ml-comparison-2026-11.md). Reliability diagrams are in `docs/reports/figures/`.
+- Final report (all phases, original vs improved, limitations): [docs/reports/final-report-2026-11.md](docs/reports/final-report-2026-11.md).
+- Phase 3 (new features incl. weather, none adopted): [docs/reports/phase3-features-2026-11.md](docs/reports/phase3-features-2026-11.md).
+- Finding so far: XGBoost, LightGBM, CatBoost, random forest, logistic regression, their ensemble and a blend with the existing models do not beat the existing models by a statistically meaningful margin; calibration helps cricket T20 only, and production's per-segment temperature scaling beats Platt and isotonic regression there.
+- The Python environment lives in `ml-service/.venv`. Installing the large ML wheels inside a OneDrive folder can stall for many minutes; if that happens, create the environment outside OneDrive.
 
 ## Cricket data
 
@@ -166,3 +181,18 @@ npm run ml:test   # Python: features, models, and a Postgres round trip against 
 ```
 
 `npm test` goes through `test/run-vitest.mjs`, which changes the drive letter to uppercase. Vitest 5 breaks on Windows when the working directory starts with a lowercase `c:\`.
+
+## Retraining and promotion
+
+Models are not swapped blindly. `npm run ml:retrain` (and the `ml:run` loop, when a model is older than `RETRAIN_DAYS`) runs a cycle per model:
+
+```bash
+npm run ml:retrain -- --dry-run          # decide and report, change nothing
+npm run ml:retrain -- --target football  # football, basketball, cricket-T20, cricket-ODI, cricket-Test (default: all)
+npm run ml:registry                      # versions, the production pointer and the decision history
+npm run ml:rollback -- --target football # put the previous production version back
+```
+
+- The matches played since the production model's data ended are split in time. A challenger is trained on everything before the newest half and compared with the production model on that held-out half, match by match.
+- It is promoted only if its log-loss is better with the paired 95% bootstrap interval entirely above zero and its calibration error is not worse than the noise floor. Ties keep the current model. Fewer than 300 new matches (150 in the window) means nothing is done.
+- On promotion the same pipeline is refitted on all data and stored as a new immutable version under `ml-service/artifacts/registry/<model>/`; the old version stays and can be restored. Every decision, including rejections and skips, is logged there with its numbers, together with a drift flag (the production model doing worse on fresh matches than its recorded validation loss).

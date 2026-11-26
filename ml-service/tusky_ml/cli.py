@@ -131,11 +131,15 @@ def cmd_run(args, settings) -> int:
                 with db.connect(settings.database_url) as conn:
                     matches = db.load_matches(conn, sport)
                     if stale:
-                        tune.apply_saved(settings.artifacts_dir, sport)
+                        # Not a blind retrain: the challenger replaces the production model only if it
+                        # is significantly better on held-out new matches (see promote.py).
+                        from . import promote, subjects
+
                         try:
-                            model = pipeline.train(sport, matches, min_matches=settings.min_train_matches)
-                            pipeline.save(model, settings.artifacts_dir)
-                            log.info("%s: retrained %s (%s)", sport, model.version, model.report["validation"][model.kind])
+                            res = promote.run_cycle(subjects.team_subject(conn, settings.artifacts_dir, sport, settings.min_train_matches), settings.artifacts_dir,
+                                                    log=lambda m: log.info("%s", m))
+                            log.info("%s: retrain cycle -> %s (%s)", sport, res["action"], res.get("reason", ""))
+                            model = pipeline.load(settings.artifacts_dir, sport)
                         except pipeline.NotEnoughData as e:
                             log.warning("%s", e)
                     if model is not None:
@@ -238,6 +242,184 @@ def cmd_tune(args, settings) -> int:
         print(f"  saved {out / 'tuning.json'}")
         if res["adopted"]:
             print(f"  saved {tune.save_config(settings.artifacts_dir, sport, res['tuned_config'], {'tuned_before': args.cutoff, 'seed': args.seed, 'trials': args.trials})}")
+    return 0
+
+
+def print_comparison(res: dict) -> None:
+    cmp = res["comparison"]
+    t = res["test"]
+    w = res["windows"]
+    print(f"\n{res['task']}: train {w['train'][2]} / validation {w['validation'][2]} / TEST {w['test'][2]} matches ({w['test'][0]} to {w['test'][1]}), {res['features']} features, {res['trials']} Optuna trials per family")
+    k3 = res["k"] == 3
+    head = f"  {'model':<22}{'log_loss':>9}{'brier':>8}{'acc':>7}{'prec':>7}{'rec':>7}{'f1':>7}{'auc':>7}{'ece':>8}" + (f"{'rps':>8}" if k3 else "")
+    print(head)
+
+    def line(label, m):
+        auc = f"{m['roc_auc']:.3f}" if m.get("roc_auc") is not None else "  n/a"
+        print(f"  {label:<22}{m['log_loss']:>9.4f}{m.get('brier_binary', m['brier']):>8.4f}{m['accuracy']:>7.3f}{m['precision']:>7.3f}{m['recall']:>7.3f}{m['f1']:>7.3f}{auc:>7}{m['ece']:>8.4f}"
+              + (f"{m['rps']:>8.4f}" if k3 else ""))
+
+    line("base rates", t["base_rates"])
+    for name in ("existing", *res["families"], "ensemble", "blend"):
+        tag = {"existing": f"existing ({res['existing_model']})"}.get(name, name)
+        line(f"{tag[:15]} raw", t[name]["raw"])
+        line(f"{tag[:9]} +{t[name]['calibrator']}", t[name]["calibrated"])
+    g = cmp["paired_log_loss_gain_vs_existing"]
+    print(f"  selected on validation: {cmp['new_model']}{' (ensemble adopted)' if res['ensemble_adopted'] else ''}; "
+          f"test log-loss {cmp['log_loss_existing']:.4f} -> {cmp['log_loss_new']:.4f} = {cmp['improvement_pct_vs_existing']:+.2f}% "
+          f"(paired gain {g['mean']:+.4f}, 95% interval {g['ci95'][0]:+.4f} to {g['ci95'][1]:+.4f})")
+    print("  (brier column: conventional binary Brier for 2-outcome tasks, sum-over-classes for football/Test)")
+
+
+def cmd_compare(args, settings) -> int:
+    from . import compare
+
+    names = [x.strip() for x in args.tasks.split(",") if x.strip()] or list(compare.TASKS)
+    out_dir = settings.artifacts_dir / "compare"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    from .config import REPO_ROOT
+
+    with db.connect(settings.database_url) as conn:
+        for name in names:
+            res = compare.run_task(conn, settings.artifacts_dir, compare.TASKS[name], trials=args.trials, seed=args.seed,
+                                   figures_dir=REPO_ROOT / "docs" / "reports" / "figures")
+            (out_dir / f"{name}.json").write_text(json.dumps(res, indent=2, default=str), encoding="utf-8")
+            print_comparison(res)
+    return 0
+
+
+def cmd_weather(args, settings) -> int:
+    from . import weather
+    from .config import REPO_ROOT
+
+    with db.connect(settings.database_url) as conn:
+        if not args.skip_geocode:
+            weather.geocode_venues(conn, cache_dir=REPO_ROOT / "data" / "openmeteo")
+        res = weather.fetch_and_store(conn, REPO_ROOT / "data" / "openmeteo")
+    print(f"weather: {res['matches_with_weather']} cricket matches now have match-day weather")
+    print("Data: Open-Meteo (open-meteo.com), free non-commercial API; ERA5 reanalysis. Replace or license before a commercial release.")
+    return 0
+
+
+def cmd_ablate(args, settings) -> int:
+    from . import ablate
+
+    names = [x.strip() for x in args.tasks.split(",") if x.strip()]
+    out_dir = settings.artifacts_dir / "ablate"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with db.connect(settings.database_url) as conn:
+        for name in names:
+            if args.calibrated:
+                groups = [g.strip() for g in args.groups.split(",") if g.strip()]
+                res = ablate.run_cricket_calibrated(conn, settings.artifacts_dir, name, groups, trials=args.trials, seed=args.seed, with_weather=args.weather)
+                (out_dir / f"{name}-calibrated.json").write_text(json.dumps(res, indent=2, default=str), encoding="utf-8")
+                continue
+            if name in ("football", "basketball"):
+                res = ablate.run_team_sport(conn, settings.artifacts_dir, name, trials=args.trials, seed=args.seed)
+            else:
+                res = ablate.run_cricket(conn, settings.artifacts_dir, name, trials=args.trials, seed=args.seed, with_weather=args.weather)
+            (out_dir / f"{name}.json").write_text(json.dumps(res, indent=2, default=str), encoding="utf-8")
+            kg = res["kept_groups"]
+            print(f"  kept by validation: {kg['groups'] or 'none'}")
+            ex = res["new_ensemble_vs_existing"]
+            print(f"  new-feature ensemble vs existing model on test: paired gain {ex['mean']:+.4f} ({ex['ci95'][0]:+.4f} to {ex['ci95'][1]:+.4f})")
+    return 0
+
+
+def cmd_retrain(args, settings) -> int:
+    from . import promote, subjects
+
+    targets = [x.strip() for x in args.target.split(",") if x.strip()] if args.target else list(subjects.TARGETS)
+    rules = promote.Rules(min_eval=args.min_eval, eval_frac=args.eval_frac)
+    feats = None
+    status = 0
+    for target in targets:
+        if target not in subjects.TARGETS:
+            print(f"! unknown target {target}; choose from {', '.join(subjects.TARGETS)}", file=sys.stderr)
+            return 2
+        try:
+            if target.startswith("cricket-"):
+                from .cricket import pipeline as cp  # noqa: F401
+
+                feats = feats if feats is not None else _cricket_feats(settings)
+                subject = subjects.cricket_subject(feats, settings.artifacts_dir, target.split("-", 1)[1], args.min_matches or settings.min_train_matches)
+            else:
+                with db.connect(settings.database_url) as conn:
+                    subject = subjects.team_subject(conn, settings.artifacts_dir, target, args.min_matches or settings.min_train_matches)
+            res = promote.run_cycle(subject, settings.artifacts_dir, rules, dry_run=args.dry_run)
+            print(f"{target}: {res['action']} - {res.get('reason', '')}")
+        except (pipeline.NotEnoughData, ValueError) as e:
+            print(f"! {target}: {e}", file=sys.stderr)
+            status = 2
+    return status
+
+
+def cmd_registry(args, settings) -> int:
+    from . import subjects
+    from .registry import Registry
+
+    for target in [x.strip() for x in args.target.split(",") if x.strip()] if args.target else list(subjects.TARGETS):
+        reg = Registry(settings.artifacts_dir, subjects.key_for(target))
+        st = reg.state()
+        print(f"{target}: production = {st['production']}; versions = {reg.versions()}")
+        for h in st["history"][-args.last:]:
+            print(f"    {h['at'][:19]}  {h['action']:<16} {h.get('version') or '-':<40} {h['reason'][:110]}")
+    return 0
+
+
+def cmd_rollback(args, settings) -> int:
+    from . import subjects
+    from .registry import Registry
+
+    reg = Registry(settings.artifacts_dir, subjects.key_for(args.target))
+    print(f"{args.target}: production is now {reg.rollback()}")
+    return 0
+
+
+def cmd_audit(args, settings) -> int:
+    from . import audit_run
+
+    with db.connect(settings.database_url) as conn:
+        res = audit_run.run(conn, settings.artifacts_dir, quick=args.quick)
+    out = settings.artifacts_dir / "audit.json"
+    out.write_text(json.dumps(res, indent=2, default=str), encoding="utf-8")
+    print(f"audit saved to {out}")
+    for sport in ("football", "basketball"):
+        r = res[sport]
+        cp, npb = r["causal_probe"], r["noise_probe"]
+        print(f"{sport}: causal probe {'PASSED' if cp['passed'] else 'FAILED'} ({cp['matches_probed']} matches, max difference {cp['max_abs_difference']:.2e}); "
+              f"noise probe skill {npb['skill_vs_base_pct']:+.2f}% vs base rates")
+    c = res["cricket"]
+    cp = c["causal_probe"]
+    print(f"cricket: causal probe {'PASSED' if cp['passed'] else 'FAILED'} ({cp['matches_probed']} matches, max difference {cp['max_abs_difference']:.2e})")
+    if "noise_probe" in c:
+        print(f"cricket: noise probe AUC {c['noise_probe']['roc_auc']} (0.5 = no signal)")
+    return 0
+
+
+def cmd_thesportsdb(args, settings) -> int:
+    from .config import REPO_ROOT
+    from .ingest import thesportsdb as tsdb
+
+    only = [x.strip() for x in args.leagues.split(",") if x.strip()] or None
+    with db.connect(settings.database_url) as conn:
+        try:
+            rep = tsdb.fill(conn, REPO_ROOT / "data" / "thesportsdb", refresh=args.refresh, only=only)
+        except tsdb.RateLimited:
+            print("! thesportsdb rate-limited the shared free key; everything fetched so far is cached. Re-run in a few minutes.", file=sys.stderr)
+            return 2
+    print(f"thesportsdb: {rep.events} events read, {rep.filled} missing results filled")
+    for lg, c in sorted(rep.per_league.items()):
+        print(f"  {lg}: " + ", ".join(f"{k} {v}" for k, v in sorted(c.items())))
+    if rep.compared:
+        print(f"  validation against scores already stored: {rep.compared} compared, {100 * rep.same_score / rep.compared:.2f}% identical")
+    for m in rep.mismatches[:10]:
+        print(f"    differs: {m}")
+    if rep.unmatched_teams:
+        print("  team names not matched (add to TSDB_OVERRIDES): " + "; ".join(sorted(rep.unmatched_teams)))
+    if rep.no_fixture:
+        print(f"  {len(rep.no_fixture)} finished events had no stored fixture, e.g. " + "; ".join(rep.no_fixture[:5]))
+    print("Data: TheSportsDB (thesportsdb.com), free development key.")
     return 0
 
 
@@ -402,6 +584,43 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--seed", type=int, default=7)
     sp.add_argument("--no-save", action="store_true")
 
+    sp = sub.add_parser("compare", help="compare model families against the existing model on identical chronological windows")
+    sp.add_argument("--tasks", default="", help="football,basketball,cricket-T20,cricket-ODI,cricket-Test (default: all)")
+    sp.add_argument("--trials", type=int, default=25, help="Optuna trials per model family")
+    sp.add_argument("--seed", type=int, default=0)
+
+    sp = sub.add_parser("weather", help="geocode cricket venues and fetch match-day weather from Open-Meteo (cached, throttled)")
+    sp.add_argument("--skip-geocode", action="store_true")
+
+    sp = sub.add_parser("retrain", help="Phase 6: retrain, compare with the production model on held-out new matches, promote only if better")
+    sp.add_argument("--target", default=None, help="football,basketball,cricket-T20,cricket-ODI,cricket-Test (default: all)")
+    sp.add_argument("--dry-run", action="store_true", help="decide and report, change nothing")
+    sp.add_argument("--min-eval", type=int, default=150, help="matches needed in the evaluation window")
+    sp.add_argument("--eval-frac", type=float, default=0.5, help="share of the new matches (newest) held out for evaluation")
+    sp.add_argument("--min-matches", type=int, default=None)
+
+    sp = sub.add_parser("registry", help="show model versions and the promotion history")
+    sp.add_argument("--target", default=None)
+    sp.add_argument("--last", type=int, default=5)
+
+    sp = sub.add_parser("rollback", help="put the previous production model version back")
+    sp.add_argument("--target", required=True)
+
+    sp = sub.add_parser("ablate", help="Phase 3: what do the new feature groups add on the untouched test window")
+    sp.add_argument("--tasks", default="football,basketball", help="football,basketball,cricket-T20,cricket-ODI,cricket-Test")
+    sp.add_argument("--trials", type=int, default=15)
+    sp.add_argument("--seed", type=int, default=0)
+    sp.add_argument("--calibrated", action="store_true", help="cricket: compare the existing model and new-feature models with per-segment temperature fitted on validation for both")
+    sp.add_argument("--groups", default="recent", help="with --calibrated: feature groups to add (comma separated)")
+    sp.add_argument("--weather", action="store_true", help="cricket: include the weather group (run `weather` first)")
+
+    sp = sub.add_parser("audit", help="measured audit: data quality, leakage probes, overfitting, calibration, staleness")
+    sp.add_argument("--quick", action="store_true", help="fewer probes (faster)")
+
+    sp = sub.add_parser("thesportsdb", help="fill results openfootball lacks (slow, cached, uses a shared free key)")
+    sp.add_argument("--leagues", default="", help="en.1,es.1,... (default: every league with missing results)")
+    sp.add_argument("--refresh", action="store_true", help="ignore the cache and fetch again")
+
     sp = sub.add_parser("openfootball", help="import league results/fixtures from openfootball (CC0)")
     sp.add_argument("--seasons", default="2022-23,2023-24,2024-25,2025-26,2026-27", help="comma list, e.g. 2025-26,2026-27")
     sp.add_argument("--leagues", default="", help="en.1,es.1,it.1,de.1,fr.1 (default: all)")
@@ -428,6 +647,22 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_cricsheet(args, load_settings())
     if args.cmd == "tune":
         return cmd_tune(args, load_settings())
+    if args.cmd == "weather":
+        return cmd_weather(args, load_settings())
+    if args.cmd == "ablate":
+        return cmd_ablate(args, load_settings())
+    if args.cmd == "retrain":
+        return cmd_retrain(args, load_settings())
+    if args.cmd == "registry":
+        return cmd_registry(args, load_settings())
+    if args.cmd == "rollback":
+        return cmd_rollback(args, load_settings())
+    if args.cmd == "compare":
+        return cmd_compare(args, load_settings())
+    if args.cmd == "audit":
+        return cmd_audit(args, load_settings())
+    if args.cmd == "thesportsdb":
+        return cmd_thesportsdb(args, load_settings())
     if args.cmd == "openfootball":
         return cmd_openfootball(args, load_settings())
     if args.cmd == "cricket-train":

@@ -338,10 +338,11 @@ class Importer:
                        start_time = excluded.start_time,
                        status = case when matches.status in ('live', 'completed') and excluded.status = 'scheduled'
                                      then matches.status else excluded.status end,
-                       provider_status = excluded.provider_status,
+                       provider_status = case when matches.home_score is not null and excluded.home_score is null
+                                              then matches.provider_status else excluded.provider_status end,
                        home_score = coalesce(excluded.home_score, matches.home_score),
                        away_score = coalesce(excluded.away_score, matches.away_score),
-                       raw = excluded.raw, updated_at = now()""",
+                       raw = coalesce(matches.raw, '{}'::jsonb) || excluded.raw, updated_at = now()""",
                 (self.sport_id, self.comp.get(LEAGUES[m.league][0]), SOURCE, m.external_id, home, away, m.start, status, pstatus,
                  m.score[0] if m.score else None, m.score[1] if m.score else None,
                  json.dumps({"round": m.round, "date": m.date, "source": "openfootball"})),

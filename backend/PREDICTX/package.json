@@ -1,0 +1,46 @@
+{
+  "name": "predictx-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PREDICTX REST API — Node.js + Express + Prisma (MySQL) + Razorpay",
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node --watch-path=src --watch-path=server.js --env-file-if-exists=.env server.js",
+    "start": "node --env-file-if-exists=.env server.js",
+    "prisma:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "node --env-file-if-exists=.env prisma/seed.js",
+    "db:reset": "prisma migrate reset --force",
+    "create-admin": "node --env-file-if-exists=.env scripts/create-admin.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@prisma/adapter-mariadb": "7.10",
+    "@prisma/client": "7.10",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.5",
+    "file-type": "^22.3.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mariadb": "^3.5.5",
+    "multer": "^2.5.0",
+    "nodemailer": "^10.6.1",
+    "pino": "^10.4.0",
+    "razorpay": "^2.9.8",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "prisma": "7.10",
+    "supertest": "^7.3.2",
+    "vitest": "^5.1.2"
+  }
+}

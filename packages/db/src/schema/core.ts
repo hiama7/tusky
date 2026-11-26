@@ -117,6 +117,10 @@ export const venues = pgTable(
     lat: doublePrecision("lat"),
     lon: doublePrecision("lon"),
     timezone: text("timezone"),
+    /** How lat/lon were found: `open-meteo`, or `unresolved` (never retried). */
+    geoSource: text("geo_source"),
+    /** The place the geocoder matched, kept so a wrong match can be spotted. */
+    geoMatch: text("geo_match"),
     ...timestamps,
   },
   (t) => [uniqueIndex("venues_provider_ext_uq").on(t.sportId, t.provider, t.externalId)],
