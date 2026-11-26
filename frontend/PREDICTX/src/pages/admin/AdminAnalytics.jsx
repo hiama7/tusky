@@ -48,16 +48,16 @@ export default function AdminAnalytics() {
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={IndianRupee} label={`Net revenue · ${rangeLabel}`} value={series ? inr(sum(series.net)) : '…'} hint={series ? `${inr(sum(series.gross))} gross` : ''} />
         <StatCard icon={Target} color="green" label="Prediction sales" value={series ? inr(sum(series.predictions)) : '…'} />
-        <StatCard icon={Crown} color="purple" label="Subscription sales" value={series ? inr(sum(series.subscriptions)) : '…'} hint={series ? `${sum(series.newSubscriptions)} new subscriptions` : ''} />
+        <StatCard icon={Crown} color="accent" label="Subscription sales" value={series ? inr(sum(series.subscriptions)) : '…'} hint={series ? `${sum(series.newSubscriptions)} new subscriptions` : ''} />
         <StatCard icon={Undo2} color="orange" label="Refunds" value={series ? inr(sum(series.refunds)) : '…'} hint={series ? `${sum(series.failedPayments)} failed payments` : ''} />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
         <ChartCard title={`1. ${range === 'today' ? 'Hourly' : 'Daily'} Revenue — ${rangeLabel}`} className="xl:col-span-2">
-          {loading || !series ? <Skeleton className="h-[300px]" /> : <AreaChart height={300} labels={series.labels.map(short)} series={[{ label: 'Net revenue', data: series.net, color: COLORS.blue }, { label: 'Refunds', data: series.refunds, color: COLORS.red }]} />}
+          {loading || !series ? <Skeleton className="h-[300px]" /> : <AreaChart height={300} labels={series.labels.map(short)} series={[{ label: 'Net revenue', data: series.net, color: COLORS.brand }, { label: 'Refunds', data: series.refunds, color: COLORS.red }]} />}
         </ChartCard>
         <ChartCard title="2. Weekly Revenue (last 12 weeks)">
-          {o ? <BarChart labels={o.weekly.labels.map((l) => l.replace('Wk of ', '').slice(5))} series={[{ label: 'Net', data: o.weekly.net, color: COLORS.purple }]} /> : <Skeleton className="h-[280px]" />}
+          {o ? <BarChart labels={o.weekly.labels.map((l) => l.replace('Wk of ', '').slice(5))} series={[{ label: 'Net', data: o.weekly.net, color: COLORS.accent }]} /> : <Skeleton className="h-[280px]" />}
         </ChartCard>
         <ChartCard title="3. Monthly Revenue (last 12 months)">
           {o ? <AreaChart labels={o.monthly.labels} series={[{ label: 'Net', data: o.monthly.net, color: COLORS.green }]} /> : <Skeleton className="h-[280px]" />}
@@ -66,10 +66,10 @@ export default function AdminAnalytics() {
           {o ? <BarChart labels={o.yearly.labels} series={[{ label: 'Net', data: o.yearly.net, color: COLORS.orange }]} /> : <Skeleton className="h-[280px]" />}
         </ChartCard>
         <ChartCard title="5. Subscription Growth (active subscribers at month end)">
-          {o ? <BarChart money={false} labels={o.subscriberGrowth.map((p) => p.label)} series={[{ label: 'Active subscribers', data: o.subscriberGrowth.map((p) => p.active), color: COLORS.purple }]} /> : <Skeleton className="h-[280px]" />}
+          {o ? <BarChart money={false} labels={o.subscriberGrowth.map((p) => p.label)} series={[{ label: 'Active subscribers', data: o.subscriberGrowth.map((p) => p.active), color: COLORS.accent }]} /> : <Skeleton className="h-[280px]" />}
         </ChartCard>
         <ChartCard title={`6. Match Prediction Sales vs Subscriptions — ${rangeLabel}`} className="xl:col-span-2">
-          {loading || !series ? <Skeleton className="h-[300px]" /> : <BarChart height={300} stacked labels={series.labels.map(short)} series={[{ label: 'Prediction sales', data: series.predictions, color: COLORS.blue }, { label: 'Subscriptions', data: series.subscriptions, color: COLORS.purple }]} />}
+          {loading || !series ? <Skeleton className="h-[300px]" /> : <BarChart height={300} stacked labels={series.labels.map(short)} series={[{ label: 'Prediction sales', data: series.predictions, color: COLORS.brand }, { label: 'Subscriptions', data: series.subscriptions, color: COLORS.accent }]} />}
         </ChartCard>
         <ChartCard title="Prediction performance" className="xl:col-span-2">
           {o ? (

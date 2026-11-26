@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Logo, ProbBar } from '../ui';
+import StadiumArt from '../graphics/StadiumArt';
 import { cx } from '../../utils/format';
 
 export default function AuthLayout({ title, subtitle, children, admin = false, points }) {
@@ -9,9 +10,7 @@ export default function AuthLayout({ title, subtitle, children, admin = false, p
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Visual side */}
       <div className={cx('relative hidden overflow-hidden border-r border-white/5 bg-ink-2 lg:flex lg:flex-col lg:justify-between lg:p-12', admin && 'admin-accent')}>
-        <div className="grid-bg absolute inset-0" />
-        <div className="blob left-10 top-20 h-72 w-72 bg-blue" />
-        <div className="blob bottom-10 right-10 h-72 w-72 bg-purple" style={{ animationDelay: '-6s' }} />
+        <StadiumArt className="absolute -bottom-6 left-0 w-full opacity-60" />
         <Logo admin={admin} className="relative" />
         <div className="relative">
           <h2 className="max-w-md text-4xl font-bold leading-tight">{admin ? 'Run the platform with clarity.' : <>Make every match day <span className="text-gradient">smarter.</span></>}</h2>
@@ -22,7 +21,7 @@ export default function AuthLayout({ title, subtitle, children, admin = false, p
           </ul>
           <div className="glass mt-10 max-w-sm p-5 animate-float">
             <p className="text-xs text-muted">{admin ? "Today's revenue (sample)" : 'Brazil vs Argentina — preview'}</p>
-            <div className="mt-3 space-y-2"><ProbBar value={admin ? 72 : 54} /><ProbBar value={admin ? 48 : 46} color="#8657FF" delay={150} /></div>
+            <div className="mt-3 space-y-2"><ProbBar value={admin ? 72 : 54} /><ProbBar value={admin ? 48 : 46} color="#FFFFFF" delay={150} /></div>
           </div>
         </div>
         <p className="relative text-xs text-muted">© TUSKY — sports analytics</p>

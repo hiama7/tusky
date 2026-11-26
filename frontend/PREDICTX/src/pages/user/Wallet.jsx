@@ -39,12 +39,12 @@ export default function Wallet() {
     <>
       <PageHeader title="Wallet" subtitle="Use wallet credit to unlock predictions instantly." actions={<button className="btn-primary" onClick={() => { setError(''); setOpen(true); }}><Plus className="h-4 w-4" /> Add money</button>} />
       <div className="mb-8 grid gap-4 md:grid-cols-3">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue to-purple p-6 shadow-[0_20px_60px_-25px_rgba(56,107,255,.9)]">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-solid to-deep p-6 text-ink shadow-[0_20px_60px_-25px_rgba(57,255,20,.9)]">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
           <WalletIcon className="h-6 w-6" />
-          <p className="mt-6 text-sm text-white/80">Available balance</p>
+          <p className="mt-6 text-sm text-ink/80">Available balance</p>
           <p className="font-display text-4xl font-bold">{wallet ? inr(wallet.balance) : '…'}</p>
-          <p className="mt-2 text-xs text-white/70">{user.name}</p>
+          <p className="mt-2 text-xs text-ink/70">{user.name}</p>
         </div>
         <StatCard icon={ArrowDownLeft} color="green" label="Total added" value={wallet ? inr(wallet.totalAdded) : '…'} />
         <StatCard icon={ArrowUpRight} color="orange" label="Spent from wallet" value={wallet ? inr(wallet.totalSpent) : '…'} />

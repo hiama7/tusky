@@ -6,10 +6,10 @@ import {
 
 Chart.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Filler, Tooltip, Legend);
 
-Chart.defaults.color = '#929CB1';
+Chart.defaults.color = '#A7B4D6';
 Chart.defaults.font.family = 'Inter, Segoe UI, system-ui, sans-serif';
 Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
-Chart.defaults.plugins.tooltip.backgroundColor = '#101625';
+Chart.defaults.plugins.tooltip.backgroundColor = '#060914';
 Chart.defaults.plugins.tooltip.borderColor = 'rgba(255,255,255,0.1)';
 Chart.defaults.plugins.tooltip.borderWidth = 1;
 Chart.defaults.plugins.tooltip.padding = 10;
@@ -17,7 +17,7 @@ Chart.defaults.plugins.legend.labels.usePointStyle = true;
 Chart.defaults.plugins.legend.labels.boxWidth = 8;
 Chart.defaults.animation.duration = 900;
 
-export const COLORS = { blue: '#386BFF', purple: '#8657FF', green: '#20D9A0', orange: '#FFB547', red: '#FF5263', muted: '#929CB1' };
+export const COLORS = { brand: '#39FF14', accent: '#FFFFFF', green: '#2EE6A8', orange: '#FFB82E', red: '#FF5C75', muted: '#A7B4D6' };
 
 /** Vertical gradient fill for area charts. */
 export function areaFill(color) {

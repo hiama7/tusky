@@ -56,7 +56,7 @@ export default function ResetPassword() {
         </Field>
         <button className="btn-primary btn-lg w-full" disabled={busy}>{busy ? <span className="spinner" /> : 'Update password'}</button>
       </form>
-      <p className="mt-6 text-center text-sm text-muted"><Link to="/login" className="text-blue hover:underline">Back to login</Link></p>
+      <p className="mt-6 text-center text-sm text-muted"><Link to="/login" className="text-brand hover:underline">Back to login</Link></p>
     </AuthLayout>
   );
 }

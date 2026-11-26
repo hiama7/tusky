@@ -6,7 +6,7 @@ const ToastContext = createContext(null);
 
 const STYLES = {
   success: { icon: CheckCircle2, color: 'text-green', bar: 'bg-green' },
-  info: { icon: Info, color: 'text-blue', bar: 'bg-blue' },
+  info: { icon: Info, color: 'text-brand', bar: 'bg-brand' },
   warning: { icon: AlertTriangle, color: 'text-orange', bar: 'bg-orange' },
   error: { icon: XCircle, color: 'text-red', bar: 'bg-red' },
 };

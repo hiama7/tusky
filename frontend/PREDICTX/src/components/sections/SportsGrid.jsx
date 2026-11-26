@@ -19,7 +19,7 @@ export default function SportsGrid({ exploreBase = '/user/matches' }) {
       {sports.map((s, i) => (
         <article key={s.id} className="glass card-lift group overflow-hidden page-enter" style={{ animationDelay: `${i * 50}ms` }}>
           <div className="relative h-36 overflow-hidden bg-ink-2">
-            {s.image && <img src={s.image} alt={`${s.name} illustration`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />}
+            {s.image && <img src={s.image} alt={`${s.name} illustration`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-1" loading="lazy" />}
             <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent" />
             <span className="badge-muted absolute right-3 top-3 bg-ink/60 backdrop-blur">{s.upcomingMatches} upcoming</span>
           </div>

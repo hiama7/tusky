@@ -34,7 +34,7 @@ const LOCKED_PLACEHOLDER = {
 function Panel({ icon: Icon, title, children, className = '' }) {
   return (
     <section className={cx('card', className)}>
-      <h3 className="mb-4 flex items-center gap-2 font-semibold"><Icon className="h-4 w-4 text-blue" /> {title}</h3>
+      <h3 className="mb-4 flex items-center gap-2 font-semibold"><Icon className="h-4 w-4 text-brand" /> {title}</h3>
       {children}
     </section>
   );
@@ -110,7 +110,7 @@ function Analysis({ match, p, locked }) {
 
       <Panel icon={Lightbulb} title="Match insights" className="lg:col-span-2">
         <ul className="grid gap-3 md:grid-cols-3">
-          {p.insights.map((t, i) => <li key={i} className="rounded-xl border border-white/5 bg-white/[.03] p-4 text-sm"><Sparkles className="mb-2 h-4 w-4 text-purple" />{t}</li>)}
+          {p.insights.map((t, i) => <li key={i} className="rounded-xl border border-white/5 bg-white/[.03] p-4 text-sm"><Sparkles className="mb-2 h-4 w-4 text-accent" />{t}</li>)}
         </ul>
       </Panel>
     </div>
@@ -163,11 +163,10 @@ export default function MatchDetails() {
 
       {/* Match header */}
       <section className="glass relative overflow-hidden p-6 md:p-8">
-        <div className="pointer-events-none absolute inset-0 opacity-30" style={{ background: `radial-gradient(500px 200px at 10% 0%, ${match.teamA.color}55, transparent), radial-gradient(500px 200px at 90% 100%, ${match.teamB.color}55, transparent)` }} />
         <div className="relative">
           <div className="flex flex-wrap items-center gap-2">
             <span className="badge-muted" style={{ color: match.sportColor }}>{match.sportName}</span>
-            <span className="badge-blue">{match.tournament}</span>
+            <span className="badge-brand">{match.tournament}</span>
             <span className="badge-muted">{match.status === 'UPCOMING' ? startsIn(match.date) : match.status}</span>
             {match.isDemo && <DemoTag>Sample fixture</DemoTag>}
             {unlocked && <span className="badge-green"><Unlock className="h-3 w-3" /> {reasonLabel}</span>}
@@ -212,7 +211,7 @@ export default function MatchDetails() {
                   {threeWay && (
                     <div>
                       <div className="mb-2 flex items-end justify-between"><span className="font-semibold">Draw</span><span className="font-display text-3xl font-bold text-muted">{p.probDraw}%</span></div>
-                      <ProbBar value={p.probDraw} color="#929CB1" delay={100} />
+                      <ProbBar value={p.probDraw} color="#A7B4D6" delay={100} />
                     </div>
                   )}
                   <div>
@@ -221,7 +220,7 @@ export default function MatchDetails() {
                   </div>
                 </div>
                 <div className="mt-6 flex flex-wrap items-center gap-3">
-                  <span className="badge-purple"><Gauge className="h-3 w-3" /> Confidence: {p.confidence}</span>
+                  <span className="badge-accent"><Gauge className="h-3 w-3" /> Confidence: {p.confidence}</span>
                   {unlocked && <span className="badge-muted">{p.source === 'MODEL' ? `Model ${p.modelVersion || ''}` : 'Analyst prediction'} · v{p.version}</span>}
                   {unlocked && p.isDemo && <DemoTag>Sample content</DemoTag>}
                 </div>
@@ -241,7 +240,7 @@ export default function MatchDetails() {
             {/* Lock overlay */}
             {!unlocked && (
               <div className="absolute inset-0 flex items-center justify-center bg-ink/40 p-4">
-                <div className="glass w-full max-w-md p-6 text-center shadow-2xl animate-scale-in" style={{ background: 'linear-gradient(160deg,rgba(21,29,46,.95),rgba(16,22,37,.95))' }}>
+                <div className="glass w-full max-w-md p-6 text-center shadow-2xl animate-scale-in" style={{ background: 'linear-gradient(160deg,rgba(9,14,29,.95),rgba(6,9,20,.95))' }}>
                   <div className="pulse-ring mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange/15"><Lock className="h-7 w-7 text-orange" /></div>
                   <h2 className="mt-4 text-xl font-bold">Unlock Detailed Match Prediction</h2>
                   <p className="mt-1 text-sm text-muted">Win probabilities, recent form, head-to-head and match insights.</p>

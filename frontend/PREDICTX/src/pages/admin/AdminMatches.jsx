@@ -139,7 +139,7 @@ export default function AdminMatches() {
         ) },
         { key: 'sport', label: 'Sport', render: (m) => <span style={{ color: m.sportColor }}>{m.sportName}</span> },
         { key: 'date', label: 'Date & time', render: (m) => <span className="text-muted">{fmtDateTime(m.date)}</span> },
-        { key: 'price', label: 'Price', render: (m) => <button className="font-semibold underline decoration-dotted underline-offset-4 hover:text-blue" onClick={() => setPriceEdit({ match: m, price: m.price })} title="Set price">{inr(m.price)}</button> },
+        { key: 'price', label: 'Price', render: (m) => <button className="font-semibold underline decoration-dotted underline-offset-4 hover:text-brand" onClick={() => setPriceEdit({ match: m, price: m.price })} title="Set price">{inr(m.price)}</button> },
         { key: 'status', label: 'Status', render: (m) => (
           <select className="input !w-32 !py-1 text-xs" value={m.status} onChange={(e) => quick(m, { status: e.target.value }, `Status set to ${e.target.value}.`)} aria-label="Match status">
             {STATUSES.map((s) => <option key={s}>{s}</option>)}
@@ -181,8 +181,8 @@ export default function AdminMatches() {
             <Field label="Match status"><select className="input" value={form.status} onChange={set('status')}>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></Field>
             <Field label="Match image (optional)" className="sm:col-span-2"><ImageUpload current={form.image} onChange={setImage} onError={toast.error} /></Field>
             <div className="flex flex-wrap gap-5 text-sm text-muted sm:col-span-2">
-              <label className="flex items-center gap-2"><input type="checkbox" className="accent-blue" checked={form.published} onChange={set('published')} /> Published (visible to users)</label>
-              <label className="flex items-center gap-2"><input type="checkbox" className="accent-blue" checked={form.featured} onChange={set('featured')} /> Feature on homepage</label>
+              <label className="flex items-center gap-2"><input type="checkbox" className="accent-brand" checked={form.published} onChange={set('published')} /> Published (visible to users)</label>
+              <label className="flex items-center gap-2"><input type="checkbox" className="accent-brand" checked={form.featured} onChange={set('featured')} /> Feature on homepage</label>
             </div>
             <div className="flex justify-end gap-2 border-t border-white/5 pt-4 sm:col-span-2">
               <button type="button" className="btn-ghost" onClick={() => setForm(null)}>Cancel</button>

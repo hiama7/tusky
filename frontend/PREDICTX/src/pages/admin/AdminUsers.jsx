@@ -25,7 +25,7 @@ function UserDetails({ id }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue to-purple font-bold">{user.name.split(' ').map((p) => p[0]).join('').slice(0, 2)}</span>
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-solid to-deep text-ink font-bold">{user.name.split(' ').map((p) => p[0]).join('').slice(0, 2)}</span>
         <div><p className="text-lg font-semibold">{user.name}</p><p className="text-sm text-muted">{user.email} · {user.phone || 'no phone'}</p></div>
       </div>
       <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">

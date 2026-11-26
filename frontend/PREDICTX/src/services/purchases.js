@@ -53,7 +53,7 @@ export async function payOnline(item, { method } = {}) {
       name: 'TUSKY',
       description: order.description,
       prefill: { ...order.prefill, ...(method ? { method } : {}) },
-      theme: { color: '#386BFF' },
+      theme: { color: '#39FF14' },
       handler: async (response) => {
         settled = true;
         try {

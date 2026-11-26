@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles, TrendingUp, Activity, Target, UserPlus, Trophy, CalendarCheck, Unlock, Star, Quote, ShieldCheck, Cpu, LineChart } from 'lucide-react';
 import { AnimatedNumber, CardSkeleton, DemoTag, EmptyState, ProbBar, TeamCrest } from '../../components/ui';
 import MatchCard from '../../components/match/MatchCard';
+import StadiumArt from '../../components/graphics/StadiumArt';
+import { Reveal, useTilt } from '../../components/ui/effects';
 import SportsGrid from '../../components/sections/SportsGrid';
 import PricingPlans from '../../components/sections/PricingPlans';
 import { TESTIMONIALS } from '../../content/testimonials';
@@ -12,18 +14,37 @@ import { useAsync } from '../../hooks/useAsync';
 import { getMatches } from '../../services/matches';
 import { useAuth } from '../../context/AuthContext';
 
-function Hero() {
+const TICKER = [
+  ['Cricket', '#39FF14'], ['Football', '#39FF14'], ['Basketball', '#39FF14'], ['Tennis', '#39FF14'],
+  ['Hockey', '#39FF14'], ['Badminton', '#39FF14'], ['Volleyball', '#39FF14'], ['Esports', '#39FF14'],
+];
+
+/** Moving strip of sports. The list is doubled so the loop has no seam. */
+function Ticker() {
   return (
-    <section className="relative isolate overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28">
+    <div className="marquee mb-12 border-y border-white/5 bg-white/[.02] py-3.5" aria-hidden="true">
+      <div className="marquee-track">
+        {[...TICKER, ...TICKER, ...TICKER, ...TICKER].map(([name, color], i) => (
+          <span key={i} className="flex items-center gap-3 px-6 font-display text-sm font-semibold uppercase tracking-[.2em] text-white/60">
+            <span className="h-2 w-2 rotate-45" style={{ background: color, boxShadow: `0 0 12px ${color}` }} />
+            {name}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Hero() {
+  const tilt = useTilt();
+  return (
+    <section className="relative isolate overflow-hidden pt-32 pb-16 md:pt-40 md:pb-20">
       {/* animated background */}
-      <div className="grid-bg absolute inset-0 -z-10" />
-      <div className="blob -z-10 left-[-10%] top-10 h-80 w-80 bg-blue" />
-      <div className="blob -z-10 right-[-5%] top-40 h-96 w-96 bg-purple" style={{ animationDelay: '-5s' }} />
-      <div className="blob -z-10 bottom-0 left-1/3 h-64 w-64 bg-green opacity-20" style={{ animationDelay: '-9s' }} />
+      <StadiumArt className="absolute inset-x-0 -bottom-10 -z-10 h-48 w-full opacity-40" />
 
       <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 md:px-6 lg:grid-cols-2">
         <div className="page-enter">
-          <span className="badge-blue"><Sparkles className="h-3 w-3" /> AI-powered sports analytics</span>
+          <span className="badge-glow ring-gradient !px-3 !py-1"><Sparkles className="h-3 w-3" /> AI-powered sports analytics</span>
           <h1 className="mt-5 text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl">
             <span className="text-gradient">Predict Smarter.</span><br />Analyze Better.<br />Stay Ahead.
           </h1>
@@ -31,42 +52,53 @@ function Hero() {
             Experience the next generation of sports analytics with AI-powered predictions, advanced match statistics, and detailed performance insights.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/user/predictions" className="btn-primary btn-lg">Explore Predictions <ArrowRight className="h-4 w-4" /></Link>
+            <Link to="/user/predictions" className="btn-primary btn-lg group">Explore Predictions <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></Link>
             <Link to="/user/free-trial" className="btn-ghost btn-lg">Start Free Trial</Link>
           </div>
-          <div className="mt-8 flex items-center gap-6 text-xs text-muted">
+          <div className="mt-8 flex flex-wrap items-center gap-6 text-xs text-muted">
             <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4 text-green" /> First prediction free</span>
-            <span className="flex items-center gap-1.5"><Cpu className="h-4 w-4 text-blue" /> Model-driven insights</span>
+            <span className="flex items-center gap-1.5"><Cpu className="h-4 w-4 text-glow" /> Model-driven insights</span>
           </div>
         </div>
 
         {/* Floating analytics cards (illustrative) */}
-        <div className="relative mx-auto h-[420px] w-full max-w-lg" aria-hidden="true">
-          <div className="glass absolute inset-x-6 top-8 p-6 shadow-2xl animate-float">
-            <div className="flex items-center justify-between">
-              <span className="badge-green">Live model</span>
-              <span className="text-xs text-muted">T20 World Series</span>
+        <div ref={tilt} className="relative mx-auto h-[420px] w-full max-w-lg" aria-hidden="true">
+          <div className="tilt absolute inset-0">
+            {/* orbit rings */}
+            <svg viewBox="0 0 400 400" className="absolute left-1/2 top-1/2 h-[125%] w-[125%] -translate-x-1/2 -translate-y-1/2">
+              <g className="origin-center animate-spin-slow">
+                <circle cx="200" cy="200" r="168" fill="none" stroke="#39FF14" strokeOpacity=".25" strokeDasharray="2 9" />
+                <circle cx="368" cy="200" r="5" fill="#B4FFA6" />
+                <circle cx="81" cy="81" r="3.5" fill="#6EE7FF" />
+              </g>
+              <circle cx="200" cy="200" r="128" fill="none" stroke="#FFFFFF" strokeOpacity=".16" />
+            </svg>
+            <div className="glass ring-gradient absolute inset-x-6 top-8 p-6 shadow-2xl animate-float">
+              <div className="flex items-center justify-between">
+                <span className="badge-green"><span className="live-dot mr-1" /> Live model</span>
+                <span className="text-xs text-muted">T20 World Series</span>
+              </div>
+              <div className="mt-5 flex items-center justify-between">
+                <div className="flex items-center gap-3"><TeamCrest team={{ short: 'IND', color: '#1E6BFF' }} /><span className="font-semibold">India</span></div>
+                <span className="text-xs text-muted">vs</span>
+                <div className="flex items-center gap-3"><span className="font-semibold">Australia</span><TeamCrest team={{ short: 'AUS', color: '#F5B800' }} /></div>
+              </div>
+              <div className="mt-6 space-y-3">
+                <ProbBar label="Win probability" value={65} color="#39FF14" />
+                <ProbBar value={35} color="#FFB82E" delay={200} />
+              </div>
             </div>
-            <div className="mt-5 flex items-center justify-between">
-              <div className="flex items-center gap-3"><TeamCrest team={{ short: 'IND', color: '#1E6BFF' }} /><span className="font-semibold">India</span></div>
-              <span className="text-xs text-muted">vs</span>
-              <div className="flex items-center gap-3"><span className="font-semibold">Australia</span><TeamCrest team={{ short: 'AUS', color: '#F5B800' }} /></div>
+            <div className="glass absolute -left-2 bottom-16 w-48 p-4 shadow-2xl animate-float sm:-left-8" style={{ animationDelay: '-2s' }}>
+              <p className="flex items-center gap-2 text-xs text-muted"><TrendingUp className="h-4 w-4 text-green" /> Model accuracy</p>
+              <p className="mt-1 font-display text-2xl font-bold">71.4%</p>
+              <svg viewBox="0 0 120 30" className="mt-2 h-8 w-full"><polyline className="draw-line" pathLength="1" points="0,25 15,22 30,24 45,15 60,17 75,10 90,12 105,5 120,7" fill="none" stroke="#2EE6A8" strokeWidth="2.5" strokeLinecap="round" /></svg>
+              <p className="text-[10px] text-muted">Sample figure</p>
             </div>
-            <div className="mt-6 space-y-3">
-              <ProbBar label="Win probability" value={65} color="#386BFF" />
-              <ProbBar value={35} color="#FFB547" delay={200} />
-            </div>
-          </div>
-          <div className="glass absolute -left-2 bottom-16 w-48 p-4 shadow-2xl animate-float sm:-left-8" style={{ animationDelay: '-2s' }}>
-            <p className="flex items-center gap-2 text-xs text-muted"><TrendingUp className="h-4 w-4 text-green" /> Model accuracy</p>
-            <p className="mt-1 font-display text-2xl font-bold">71.4%</p>
-            <svg viewBox="0 0 120 30" className="mt-2 h-8 w-full"><polyline points="0,25 15,22 30,24 45,15 60,17 75,10 90,12 105,5 120,7" fill="none" stroke="#20D9A0" strokeWidth="2.5" strokeLinecap="round" /></svg>
-            <p className="text-[10px] text-muted">Sample figure</p>
-          </div>
-          <div className="glass absolute -right-2 bottom-4 w-52 p-4 shadow-2xl animate-float sm:-right-6" style={{ animationDelay: '-4s' }}>
-            <p className="flex items-center gap-2 text-xs text-muted"><Activity className="h-4 w-4 text-purple" /> Head-to-head</p>
-            <div className="mt-3 flex h-16 items-end gap-1.5">
-              {[40, 65, 30, 80, 55, 90, 70].map((h, i) => <span key={i} className="flex-1 rounded-t bg-gradient-to-t from-blue to-purple" style={{ height: `${h}%` }} />)}
+            <div className="glass absolute -right-2 bottom-4 w-52 p-4 shadow-2xl animate-float sm:-right-6" style={{ animationDelay: '-4s' }}>
+              <p className="flex items-center gap-2 text-xs text-muted"><Activity className="h-4 w-4 text-accent" /> Head-to-head</p>
+              <div className="mt-3 flex h-16 items-end gap-1.5">
+                {[40, 65, 30, 80, 55, 90, 70].map((h, i) => <span key={i} className="grow-bar flex-1 rounded-t bg-gradient-to-t from-deep via-brand to-glow" style={{ height: `${h}%`, animationDelay: `${300 + i * 80}ms` }} />)}
+              </div>
             </div>
           </div>
         </div>
@@ -92,15 +124,15 @@ const STEPS = [
 function Section({ id, eyebrow, title, sub, children, action }) {
   return (
     <section id={id} className="mx-auto max-w-7xl scroll-mt-24 px-4 py-16 md:px-6 md:py-20">
-      <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <Reveal className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="eyebrow">{eyebrow}</p>
           <h2 className="section-title mt-2">{title}</h2>
           {sub && <p className="section-sub">{sub}</p>}
         </div>
         {action}
-      </div>
-      {children}
+      </Reveal>
+      <Reveal delay={120}>{children}</Reveal>
     </section>
   );
 }
@@ -117,18 +149,19 @@ export default function Home({ scrollTo }) {
   return (
     <>
       <Hero />
+      <Ticker />
 
       {/* Statistics */}
       <section className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="glass grid grid-cols-2 gap-6 p-6 md:grid-cols-4 md:p-8">
+        <Reveal className="glass ring-gradient grid grid-cols-2 gap-6 p-6 md:grid-cols-4 md:p-8">
           {STATS.map(({ value, suffix, label, icon: Icon }) => (
             <div key={label} className="text-center">
-              <Icon className="mx-auto h-5 w-5 text-blue" />
+              <Icon className="mx-auto h-5 w-5 text-glow" />
               <p className="mt-2 font-display text-3xl font-bold md:text-4xl"><AnimatedNumber value={value} suffix={suffix} /></p>
               <p className="mt-1 text-sm text-muted">{label}</p>
             </div>
           ))}
-        </div>
+        </Reveal>
         <p className="mt-2 text-center text-[11px] text-muted">Demonstration figures — not real business statistics.</p>
       </section>
 
@@ -146,9 +179,9 @@ export default function Home({ scrollTo }) {
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map(({ icon: Icon, title, text }, i) => (
             <div key={title} className="card card-lift relative overflow-hidden">
-              <span className="absolute -right-2 -top-4 font-display text-8xl font-bold text-white/[.04]">{i + 1}</span>
-              <div className="stat-icon bg-gradient-to-br from-blue/25 to-purple/25 text-white"><Icon className="h-5 w-5" /></div>
-              <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-blue">Step {i + 1}</p>
+              <span className="absolute -right-2 -top-4 font-display text-8xl font-bold text-accent/[.12]">{i + 1}</span>
+              <div className="stat-icon bg-gradient-to-br from-brand/25 to-accent/25 text-white"><Icon className="h-5 w-5" /></div>
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-brand">Step {i + 1}</p>
               <h3 className="mt-1 font-semibold">{title}</h3>
               <p className="mt-1 text-sm text-muted">{text}</p>
             </div>
@@ -164,11 +197,11 @@ export default function Home({ scrollTo }) {
         <div className="grid gap-5 md:grid-cols-3">
           {TESTIMONIALS.map((t) => (
             <figure key={t.name} className="card card-lift">
-              <Quote className="h-6 w-6 text-purple" />
+              <Quote className="h-6 w-6 text-accent" />
               <blockquote className="mt-3 text-sm leading-relaxed text-white/90">“{t.text}”</blockquote>
               <div className="mt-4 flex text-orange">{Array.from({ length: 5 }, (_, i) => <Star key={i} className="h-4 w-4" fill={i < t.rating ? 'currentColor' : 'none'} />)}</div>
               <figcaption className="mt-3 flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue to-purple text-xs font-bold">{t.name[0]}</span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-solid to-deep text-ink text-xs font-bold">{t.name[0]}</span>
                 <span><span className="block text-sm font-semibold">{t.name}</span><span className="text-xs text-muted">{t.role}</span></span>
               </figcaption>
             </figure>

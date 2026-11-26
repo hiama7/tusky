@@ -135,7 +135,7 @@ export default function AdminPredictions() {
         ) },
         { key: 'prob', label: 'Probabilities', render: (p) => <div className="w-48"><div className="mb-1 flex justify-between text-xs"><span>{p.match.teamA.short} {p.probA}%</span>{p.probDraw !== null && <span>D {p.probDraw}%</span>}<span>{p.match.teamB.short} {p.probB}%</span></div><ProbBar value={p.probA} color={p.match.teamA.color} /></div> },
         { key: 'confidence', label: 'Confidence', render: (p) => <span className={{ High: 'badge-green', Medium: 'badge-orange', Low: 'badge-red' }[p.confidence]}>{p.confidence}</span> },
-        { key: 'version', label: 'Version', render: (p) => <button className="text-xs text-blue hover:underline" onClick={() => setVersions(p)}>v{p.version} · {p.versions} saved</button> },
+        { key: 'version', label: 'Version', render: (p) => <button className="text-xs text-brand hover:underline" onClick={() => setVersions(p)}>v{p.version} · {p.versions} saved</button> },
         { key: 'status', label: 'Status', render: (p) => <StatusBadge status={p.status} /> },
         { key: 'actions', label: 'Actions', render: (p) => (
           <div className="flex justify-end gap-1.5">

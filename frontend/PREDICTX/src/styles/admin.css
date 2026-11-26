@@ -16,7 +16,6 @@
     @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3.5 py-1.5 text-xs font-medium text-muted transition-all cursor-pointer whitespace-nowrap;
   }
   .chip:hover { @apply text-white border-white/25; }
-  .chip.active { @apply text-white border-transparent; background: linear-gradient(135deg, var(--color-blue), var(--color-purple)); }
+  .chip.active { @apply text-ink border-transparent; background: linear-gradient(135deg, var(--color-solid), var(--color-deep)); }
 
-  .admin-accent { background: radial-gradient(600px 200px at 0% 0%, rgba(134,87,255,.18), transparent 70%); }
 }

@@ -83,9 +83,9 @@ export default function PaymentModal({ open, onClose, title, subtitle, amount, w
               const isWallet = m.id === 'wallet';
               return (
                 <button key={m.id} type="button" disabled={busy || (isWallet && lowWallet)} onClick={() => setMethod(m.id)}
-                  className={cx('flex items-start gap-3 rounded-xl border p-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-50', method === m.id ? 'border-blue bg-blue/10' : 'border-white/10 hover:border-white/25')}
+                  className={cx('flex items-start gap-3 rounded-xl border p-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-50', method === m.id ? 'border-brand bg-brand/10' : 'border-white/10 hover:border-white/25')}
                   aria-pressed={method === m.id}>
-                  <Icon className={cx('mt-0.5 h-5 w-5', method === m.id ? 'text-blue' : 'text-muted')} />
+                  <Icon className={cx('mt-0.5 h-5 w-5', method === m.id ? 'text-brand' : 'text-muted')} />
                   <span>
                     <span className="block text-sm font-medium">{m.label}</span>
                     <span className={cx('block text-[11px]', isWallet && lowWallet ? 'text-orange' : 'text-muted')}>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Menu, LogOut } from 'lucide-react';
 import { Logo } from '../ui';
+import { PointerGlow } from '../ui/effects';
 import { cx } from '../../utils/format';
 
 /**
@@ -21,6 +22,7 @@ export default function DashboardShell({ nav, onLogout, home, topbarRight, admin
 
   return (
     <div className={cx('app-shell', admin && 'admin-accent')}>
+      <PointerGlow />
       {/* mobile backdrop */}
       {open && <div className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setOpen(false)} />}
 

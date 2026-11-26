@@ -8,8 +8,8 @@ export default function ProbabilityChart({ match, prediction }) {
     labels: [match.teamA.name, ...(draw ? ['Draw'] : []), match.teamB.name],
     datasets: [{
       data: [prediction.probA, ...(draw ? [prediction.probDraw] : []), prediction.probB],
-      backgroundColor: [match.teamA.color, ...(draw ? ['#929CB1'] : []), match.teamB.color],
-      borderColor: '#151D2E',
+      backgroundColor: [match.teamA.color, ...(draw ? ['#A7B4D6'] : []), match.teamB.color],
+      borderColor: '#090E1D',
       borderWidth: 4,
       hoverOffset: 6,
     }],
