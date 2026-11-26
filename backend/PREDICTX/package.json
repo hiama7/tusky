@@ -17,6 +17,8 @@
     "db:seed": "node --env-file-if-exists=.env prisma/seed.js",
     "db:reset": "prisma migrate reset --force",
     "create-admin": "node --env-file-if-exists=.env scripts/create-admin.js",
+    "demo:hide": "node --env-file-if-exists=.env scripts/demo-content.js hide",
+    "demo:show": "node --env-file-if-exists=.env scripts/demo-content.js show",
     "ml:sync": "node --env-file-if-exists=.env scripts/ml-sync.js",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -1,5 +1,4 @@
 import NewsFeed from '../../components/sections/NewsFeed';
-import { DemoTag } from '../../components/ui';
 
 export default function News() {
   return (
@@ -10,7 +9,6 @@ export default function News() {
           <h1 className="section-title mt-2">Sports news & analysis</h1>
           <p className="section-sub">Match previews, transfers, tournament updates and player news.</p>
         </div>
-        <DemoTag>Sample articles</DemoTag>
       </div>
       <NewsFeed />
     </div>

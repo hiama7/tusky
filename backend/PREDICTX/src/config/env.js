@@ -1,4 +1,6 @@
 // Validates environment variables once at start-up so misconfiguration fails fast.
+import { readFileSync } from 'node:fs';
+import { parseEnv } from 'node:util';
 import { z } from 'zod';
 
 const bool = z
@@ -31,6 +33,9 @@ const schema = z.object({
   SPORTS_DATA_API_KEY: z.string().optional().default(''),
   NEWS_PROVIDER: z.string().default('none'),
   NEWS_API_KEY: z.string().optional().default(''),
+  // League tables (football-data.org) and headlines (gnews.io). Empty = off.
+  FOOTBALL_DATA_API_KEY: z.string().optional().default(''),
+  GNEWS_API_KEY: z.string().optional().default(''),
   // The ML service's Postgres database (read-only). Empty = ML sync disabled.
   ML_DATABASE_URL: z.string().optional().default(''),
   ML_PREDICTION_PRICE: z.coerce.number().min(0).max(100000).default(49),
@@ -57,6 +62,17 @@ export const env = {
   corsOrigins: parsed.data.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean),
   razorpayEnabled: Boolean(parsed.data.RAZORPAY_KEY_ID && parsed.data.RAZORPAY_KEY_SECRET),
 };
+
+// The two data-API keys may instead live in the project-root .env. Only these two
+// are taken from it (it also holds the ML service's own DATABASE_URL).
+if (!env.isTest) {
+  try {
+    const root = parseEnv(readFileSync(new URL('../../../../.env', import.meta.url), 'utf8'));
+    for (const key of ['FOOTBALL_DATA_API_KEY', 'GNEWS_API_KEY']) env[key] ||= root[key] || '';
+  } catch {
+    /* no root .env */
+  }
+}
 
 if (env.isProd && env.RATE_LIMIT_DISABLED) {
   throw new Error('RATE_LIMIT_DISABLED must not be set in production.');

@@ -137,6 +137,7 @@ export function news(n, { full = false } = {}) {
     trending: n.trending,
     views: n.views,
     source: n.source,
+    sourceUrl: /^https?:\/\//i.test(n.externalUrl || '') ? n.externalUrl : null,
     isDemo: n.isDemo,
   };
 }

@@ -1,7 +1,7 @@
 // Sports news interface: featured, latest (paginated), trending, search, category
 // filters, news cards and a "Read More" article modal. Data: GET /api/news.
 import { useEffect, useState } from 'react';
-import { Search, Flame, Clock, Eye, ArrowRight, Newspaper } from 'lucide-react';
+import { Search, Flame, Clock, Eye, ArrowRight, Newspaper, ExternalLink } from 'lucide-react';
 import { Chips, CardSkeleton, EmptyState, Modal, DemoTag, Skeleton } from '../ui';
 import { useAsync } from '../../hooks/useAsync';
 import { getArticle, getNews, NEWS_CATEGORIES } from '../../services/news';
@@ -130,6 +130,9 @@ export default function NewsFeed() {
             <p className="mt-4 font-medium text-white/90">{open.excerpt}</p>
             {articleLoading ? <div className="mt-4 space-y-2"><Skeleton className="h-4" /><Skeleton className="h-4" /><Skeleton className="h-4 w-2/3" /></div>
               : article?.body?.split('\n').filter(Boolean).map((p, i) => <p key={i} className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">{p}</p>)}
+            {article?.sourceUrl && (
+              <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" className="btn-primary mt-5">Read the full story <ExternalLink className="h-4 w-4" /></a>
+            )}
           </article>
         )}
       </Modal>

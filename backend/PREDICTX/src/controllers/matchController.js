@@ -2,6 +2,7 @@
 // matches are visible. Each match carries the viewer's unlock status but never
 // any prediction content.
 import { prisma } from '../config/database.js';
+import { standingsFor } from '../services/standingsService.js';
 import { ApiError, ok, paginate } from '../utils/apiResponse.js';
 import { accessMap } from '../services/predictionService.js';
 import * as S from '../services/serializers.js';
@@ -71,6 +72,16 @@ export async function matchDetails(req, res) {
   if (!m) throw ApiError.notFound('Match not found');
   const access = await accessMap(req.user?.id, [m]);
   ok(res, { match: S.match(m, access.get(m.id)) });
+}
+
+/** GET /api/matches/:id/standings — the competition's league table, if available. */
+export async function matchStandings(req, res) {
+  const m = await prisma.match.findFirst({
+    where: { id: req.valid.params.id, published: true, archivedAt: null },
+    include: { sport: true, tournament: true, teamA: true, teamB: true },
+  });
+  if (!m) throw ApiError.notFound('Match not found');
+  ok(res, await standingsFor({ sport: m.sport.slug, tournament: m.tournament.name, teamA: m.teamA.name, teamB: m.teamB.name }));
 }
 
 export async function matchResults(req, res) {

@@ -14,6 +14,7 @@ import {
 import { DemoTag, EmptyState, Modal, ProbBar, Skeleton, TeamCrest } from '../../components/ui';
 import ProbabilityChart from '../../components/match/ProbabilityChart';
 import PaymentModal from '../../components/match/PaymentModal';
+import LeagueTable from '../../components/match/LeagueTable';
 import { useToast } from '../../context/ToastContext';
 import { useAsync } from '../../hooks/useAsync';
 import { getMatch, getPrediction } from '../../services/matches';
@@ -270,6 +271,8 @@ export default function MatchDetails() {
             {!unlocked && <p className="mb-3 flex items-center gap-2 text-sm text-muted"><Lock className="h-4 w-4 text-orange" /> Preview — unlock to reveal recent form, head-to-head records and match insights.</p>}
             <Analysis match={match} p={p} locked={!unlocked} />
           </div>
+
+          <LeagueTable matchId={match.id} />
 
           <p className="text-center text-xs text-muted">Predictions are probabilistic analysis for entertainment and research. They never guarantee a result.</p>
         </>

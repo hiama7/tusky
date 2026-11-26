@@ -110,7 +110,6 @@ function Footer() {
       </div>
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-8 text-xs text-muted md:flex-row md:justify-between md:px-6">
         <p>© {new Date().getFullYear()} TUSKY. Predictions are probabilistic analysis for entertainment & research only.</p>
-        <p>Content marked “Sample” is demonstration data.</p>
       </div>
     </footer>
   );

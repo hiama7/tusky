@@ -1,7 +1,7 @@
 // Split-screen layout for login / register / admin login.
 import { Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
-import { Logo, ProbBar } from '../ui';
+import { Logo } from '../ui';
 import StadiumArt from '../graphics/StadiumArt';
 import { cx } from '../../utils/format';
 
@@ -15,14 +15,10 @@ export default function AuthLayout({ title, subtitle, children, admin = false, p
         <div className="relative">
           <h2 className="max-w-md text-4xl font-bold leading-tight">{admin ? 'Run the platform with clarity.' : <>Make every match day <span className="text-gradient">smarter.</span></>}</h2>
           <ul className="mt-8 space-y-3 text-sm text-muted">
-            {(points || ['Win probabilities for every featured match', 'Team form, head-to-head & player stats', 'Your first prediction free']).map((p) => (
+            {(points || ['Win probabilities for listed matches', 'Recent form and head-to-head records', 'Your first prediction free']).map((p) => (
               <li key={p} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green" /> {p}</li>
             ))}
           </ul>
-          <div className="glass mt-10 max-w-sm p-5 animate-float">
-            <p className="text-xs text-muted">{admin ? "Today's revenue (sample)" : 'Brazil vs Argentina — preview'}</p>
-            <div className="mt-3 space-y-2"><ProbBar value={admin ? 72 : 54} /><ProbBar value={admin ? 48 : 46} color="#FFFFFF" delay={150} /></div>
-          </div>
         </div>
         <p className="relative text-xs text-muted">© TUSKY — sports analytics</p>
       </div>

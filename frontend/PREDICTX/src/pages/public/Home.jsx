@@ -1,17 +1,17 @@
 // Homepage: hero, stats, sport categories, featured matches, how it works,
-// pricing, sample testimonials, about.
+// pricing, about.
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Sparkles, TrendingUp, Activity, Target, UserPlus, Trophy, CalendarCheck, Unlock, Star, Quote, ShieldCheck, Cpu, LineChart } from 'lucide-react';
-import { AnimatedNumber, CardSkeleton, DemoTag, EmptyState, ProbBar, TeamCrest } from '../../components/ui';
+import { ArrowRight, Sparkles, Activity, Target, UserPlus, Trophy, CalendarCheck, Unlock, Lock, ShieldCheck, Cpu } from 'lucide-react';
+import { AnimatedNumber, CardSkeleton, EmptyState, TeamCrest } from '../../components/ui';
 import MatchCard from '../../components/match/MatchCard';
 import StadiumArt from '../../components/graphics/StadiumArt';
 import { Reveal, useTilt } from '../../components/ui/effects';
 import SportsGrid from '../../components/sections/SportsGrid';
 import PricingPlans from '../../components/sections/PricingPlans';
-import { TESTIMONIALS } from '../../content/testimonials';
 import { useAsync } from '../../hooks/useAsync';
-import { getMatches } from '../../services/matches';
+import { getMatchPage } from '../../services/matches';
+import { fmtDate, fmtTime, inr } from '../../utils/format';
 import { useAuth } from '../../context/AuthContext';
 
 const TICKER = [
@@ -35,7 +35,58 @@ function Ticker() {
   );
 }
 
-function Hero() {
+/** The hero's floating cards: the next real fixture and live counts. No
+ *  probabilities here — those are only sent to viewers entitled to them. */
+function NextMatch({ match, total, competitions, tilt }) {
+  return (
+    <div ref={tilt} className="relative mx-auto h-[420px] w-full max-w-lg">
+      <div className="tilt absolute inset-0">
+        {/* orbit rings */}
+        <svg viewBox="0 0 400 400" aria-hidden="true" className="absolute left-1/2 top-1/2 h-[125%] w-[125%] -translate-x-1/2 -translate-y-1/2">
+          <g className="origin-center animate-spin-slow">
+            <circle cx="200" cy="200" r="168" fill="none" stroke="#39FF14" strokeOpacity=".25" strokeDasharray="2 9" />
+            <circle cx="368" cy="200" r="5" fill="#39FF14" />
+            <circle cx="81" cy="81" r="3.5" fill="#FFFFFF" />
+          </g>
+          <circle cx="200" cy="200" r="128" fill="none" stroke="#FFFFFF" strokeOpacity=".12" />
+        </svg>
+        {match && (
+          <Link to={`/user/match/${match.id}`} className="glass ring-gradient absolute inset-x-6 top-8 block p-6 shadow-2xl animate-float">
+            <div className="flex items-center justify-between gap-3">
+              <span className="badge-green">Next match</span>
+              <span className="truncate text-xs text-muted">{match.tournament}</span>
+            </div>
+            <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
+              {[match.teamA, null, match.teamB].map((team) => (team ? (
+                <div key={team.name} className="flex min-w-0 flex-col items-center gap-2"><TeamCrest team={team} /><span className="w-full truncate text-sm font-semibold">{team.name}</span></div>
+              ) : <span key="vs" className="text-xs text-muted">vs</span>))}
+            </div>
+            <p className="mt-5 flex items-center justify-between border-t border-white/10 pt-4 text-xs text-muted">
+              <span>{fmtDate(match.date, { day: 'numeric', month: 'short' })} · {fmtTime(match.date)}</span>
+              <span className="flex items-center gap-1.5 font-semibold text-brand">{match.unlocked ? 'View prediction' : <><Lock className="h-3.5 w-3.5" /> {inr(match.price)}</>}</span>
+            </p>
+          </Link>
+        )}
+        {total > 0 && (
+          <>
+            <div className="glass absolute -left-2 bottom-8 w-44 p-4 shadow-2xl animate-float sm:-left-8" style={{ animationDelay: '-2s' }}>
+              <p className="flex items-center gap-2 text-xs text-muted"><CalendarCheck className="h-4 w-4 text-green" /> Upcoming</p>
+              <p className="mt-1 font-display text-2xl font-bold">{total}</p>
+              <p className="text-[10px] text-muted">matches listed now</p>
+            </div>
+            <div className="glass absolute -right-2 bottom-0 w-44 p-4 shadow-2xl animate-float sm:-right-6" style={{ animationDelay: '-4s' }}>
+              <p className="flex items-center gap-2 text-xs text-muted"><Trophy className="h-4 w-4 text-accent" /> Competitions</p>
+              <p className="mt-1 font-display text-2xl font-bold">{competitions}</p>
+              <p className="text-[10px] text-muted">with upcoming matches</p>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Hero({ next, total, competitions }) {
   const tilt = useTilt();
   return (
     <section className="relative isolate overflow-hidden pt-32 pb-16 md:pt-40 md:pb-20">
@@ -49,7 +100,7 @@ function Hero() {
             <span className="text-gradient">Predict Smarter.</span><br />Analyze Better.<br />Stay Ahead.
           </h1>
           <p className="mt-6 max-w-xl text-base text-muted md:text-lg">
-            Experience the next generation of sports analytics with AI-powered predictions, advanced match statistics, and detailed performance insights.
+            Win probabilities from a model trained on past results, with recent form and head-to-head records for each match.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/user/predictions" className="btn-primary btn-lg group">Explore Predictions <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></Link>
@@ -61,64 +112,17 @@ function Hero() {
           </div>
         </div>
 
-        {/* Floating analytics cards (illustrative) */}
-        <div ref={tilt} className="relative mx-auto h-[420px] w-full max-w-lg" aria-hidden="true">
-          <div className="tilt absolute inset-0">
-            {/* orbit rings */}
-            <svg viewBox="0 0 400 400" className="absolute left-1/2 top-1/2 h-[125%] w-[125%] -translate-x-1/2 -translate-y-1/2">
-              <g className="origin-center animate-spin-slow">
-                <circle cx="200" cy="200" r="168" fill="none" stroke="#39FF14" strokeOpacity=".25" strokeDasharray="2 9" />
-                <circle cx="368" cy="200" r="5" fill="#B4FFA6" />
-                <circle cx="81" cy="81" r="3.5" fill="#6EE7FF" />
-              </g>
-              <circle cx="200" cy="200" r="128" fill="none" stroke="#FFFFFF" strokeOpacity=".16" />
-            </svg>
-            <div className="glass ring-gradient absolute inset-x-6 top-8 p-6 shadow-2xl animate-float">
-              <div className="flex items-center justify-between">
-                <span className="badge-green"><span className="live-dot mr-1" /> Live model</span>
-                <span className="text-xs text-muted">T20 World Series</span>
-              </div>
-              <div className="mt-5 flex items-center justify-between">
-                <div className="flex items-center gap-3"><TeamCrest team={{ short: 'IND', color: '#1E6BFF' }} /><span className="font-semibold">India</span></div>
-                <span className="text-xs text-muted">vs</span>
-                <div className="flex items-center gap-3"><span className="font-semibold">Australia</span><TeamCrest team={{ short: 'AUS', color: '#F5B800' }} /></div>
-              </div>
-              <div className="mt-6 space-y-3">
-                <ProbBar label="Win probability" value={65} color="#39FF14" />
-                <ProbBar value={35} color="#FFB82E" delay={200} />
-              </div>
-            </div>
-            <div className="glass absolute -left-2 bottom-16 w-48 p-4 shadow-2xl animate-float sm:-left-8" style={{ animationDelay: '-2s' }}>
-              <p className="flex items-center gap-2 text-xs text-muted"><TrendingUp className="h-4 w-4 text-green" /> Model accuracy</p>
-              <p className="mt-1 font-display text-2xl font-bold">71.4%</p>
-              <svg viewBox="0 0 120 30" className="mt-2 h-8 w-full"><polyline className="draw-line" pathLength="1" points="0,25 15,22 30,24 45,15 60,17 75,10 90,12 105,5 120,7" fill="none" stroke="#2EE6A8" strokeWidth="2.5" strokeLinecap="round" /></svg>
-              <p className="text-[10px] text-muted">Sample figure</p>
-            </div>
-            <div className="glass absolute -right-2 bottom-4 w-52 p-4 shadow-2xl animate-float sm:-right-6" style={{ animationDelay: '-4s' }}>
-              <p className="flex items-center gap-2 text-xs text-muted"><Activity className="h-4 w-4 text-accent" /> Head-to-head</p>
-              <div className="mt-3 flex h-16 items-end gap-1.5">
-                {[40, 65, 30, 80, 55, 90, 70].map((h, i) => <span key={i} className="grow-bar flex-1 rounded-t bg-gradient-to-t from-deep via-brand to-glow" style={{ height: `${h}%`, animationDelay: `${300 + i * 80}ms` }} />)}
-              </div>
-            </div>
-          </div>
-        </div>
+        <NextMatch match={next} total={total} competitions={competitions} tilt={tilt} />
       </div>
     </section>
   );
 }
 
-const STATS = [
-  { value: 10000, suffix: '+', label: 'Matches Analyzed', icon: LineChart },
-  { value: 25, suffix: '+', label: 'Sports Tournaments', icon: Trophy },
-  { value: 5000, suffix: '+', label: 'Registered Users', icon: UserPlus },
-  { value: 1000, suffix: '+', label: 'Predictions Published', icon: Target },
-];
-
 const STEPS = [
   { icon: UserPlus, title: 'Register', text: 'Create your free account in under a minute.' },
-  { icon: Trophy, title: 'Choose your sport', text: 'Cricket, football, tennis, esports and more.' },
-  { icon: CalendarCheck, title: 'Select an upcoming match', text: 'Browse fixtures with dates, venues and prices.' },
-  { icon: Unlock, title: 'Unlock its prediction', text: 'Get probabilities, analysis and key insights.' },
+  { icon: Trophy, title: 'Choose your sport', text: 'Choose one with upcoming fixtures.' },
+  { icon: CalendarCheck, title: 'Select an upcoming match', text: 'Browse fixtures with dates and prices.' },
+  { icon: Unlock, title: 'Unlock its prediction', text: 'See win probabilities and the numbers behind them.' },
 ];
 
 function Section({ id, eyebrow, title, sub, children, action }) {
@@ -139,8 +143,18 @@ function Section({ id, eyebrow, title, sub, children, action }) {
 
 export default function Home({ scrollTo }) {
   const { user } = useAuth();
-  const { data: matches, loading } = useAsync(() => getMatches({ upcoming: true }), [user?.id]);
-  const featured = (matches || []).filter((m) => m.featured).slice(0, 6);
+  const { data: page, loading } = useAsync(() => getMatchPage({ upcoming: true, limit: 100 }), [user?.id]);
+  const matches = page?.items || [];
+  const total = page?.pagination?.total ?? matches.length;
+  const picked = matches.filter((m) => m.featured);
+  const shown = (picked.length ? picked : matches).slice(0, 6);
+  const competitions = new Set(matches.map((m) => m.tournament)).size;
+  const stats = matches.length ? [
+    { value: total, label: 'Upcoming matches', icon: CalendarCheck },
+    { value: competitions, label: 'Competitions covered', icon: Trophy },
+    { value: new Set(matches.map((m) => m.sportName)).size, label: 'Sports with fixtures', icon: Activity },
+    { value: Math.min(...matches.map((m) => Number(m.price))), prefix: '₹', label: 'Predictions from', icon: Target },
+  ] : [];
 
   useEffect(() => {
     if (scrollTo) setTimeout(() => document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth' }), 150);
@@ -148,30 +162,31 @@ export default function Home({ scrollTo }) {
 
   return (
     <>
-      <Hero />
+      <Hero next={matches[0]} total={total} competitions={competitions} />
       <Ticker />
 
-      {/* Statistics */}
-      <section className="mx-auto max-w-7xl px-4 md:px-6">
-        <Reveal className="glass ring-gradient grid grid-cols-2 gap-6 p-6 md:grid-cols-4 md:p-8">
-          {STATS.map(({ value, suffix, label, icon: Icon }) => (
-            <div key={label} className="text-center">
-              <Icon className="mx-auto h-5 w-5 text-glow" />
-              <p className="mt-2 font-display text-3xl font-bold md:text-4xl"><AnimatedNumber value={value} suffix={suffix} /></p>
-              <p className="mt-1 text-sm text-muted">{label}</p>
-            </div>
-          ))}
-        </Reveal>
-        <p className="mt-2 text-center text-[11px] text-muted">Demonstration figures — not real business statistics.</p>
-      </section>
+      {/* Statistics, counted from the matches listed right now */}
+      {stats.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="glass ring-gradient grid grid-cols-2 gap-6 p-6 md:grid-cols-4 md:p-8">
+            {stats.map(({ value, prefix, label, icon: Icon }) => (
+              <div key={label} className="text-center">
+                <Icon className="mx-auto h-5 w-5 text-glow" />
+                <p className="mt-2 font-display text-3xl font-bold md:text-4xl"><AnimatedNumber value={value} prefix={prefix} /></p>
+                <p className="mt-1 text-sm text-muted">{label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
-      <Section eyebrow="Sports" title="Pick your arena" sub="Eight sports, one analytics engine. Explore upcoming fixtures and unlock the matches you care about." action={<Link to="/sports" className="btn-ghost">All sports <ArrowRight className="h-4 w-4" /></Link>}>
+      <Section eyebrow="Sports" title="Pick your arena" sub="Pick a sport to see its upcoming fixtures and unlock the matches you care about." action={<Link to="/sports" className="btn-ghost">All sports <ArrowRight className="h-4 w-4" /></Link>}>
         <SportsGrid />
       </Section>
 
-      <Section eyebrow="Featured" title="Upcoming featured matches" sub="Every prediction is locked until you unlock it — individually, with a subscription, or with your free trial." action={<Link to="/user/matches" className="btn-ghost">View all matches <ArrowRight className="h-4 w-4" /></Link>}>
+      <Section eyebrow="Fixtures" title="Upcoming matches" sub="Every prediction is locked until you unlock it — individually, with a subscription, or with your free trial." action={<Link to="/user/matches" className="btn-ghost">View all matches <ArrowRight className="h-4 w-4" /></Link>}>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {loading ? <CardSkeleton count={6} className="h-72" /> : featured.length ? featured.map((m) => <MatchCard key={m.id} match={m} />) : <div className="sm:col-span-2 lg:col-span-3"><EmptyState title="No featured matches right now" text="Check back soon — new fixtures are added regularly." /></div>}
+          {loading ? <CardSkeleton count={6} className="h-72" /> : shown.length ? shown.map((m) => <MatchCard key={m.id} match={m} />) : <div className="sm:col-span-2 lg:col-span-3"><EmptyState title="No upcoming matches right now" text="Check back soon — new fixtures are added regularly." /></div>}
         </div>
       </Section>
 
@@ -193,27 +208,10 @@ export default function Home({ scrollTo }) {
         <PricingPlans />
       </Section>
 
-      <Section eyebrow="Testimonials" title="What fans are saying" action={<DemoTag>Sample testimonials</DemoTag>}>
-        <div className="grid gap-5 md:grid-cols-3">
-          {TESTIMONIALS.map((t) => (
-            <figure key={t.name} className="card card-lift">
-              <Quote className="h-6 w-6 text-accent" />
-              <blockquote className="mt-3 text-sm leading-relaxed text-white/90">“{t.text}”</blockquote>
-              <div className="mt-4 flex text-orange">{Array.from({ length: 5 }, (_, i) => <Star key={i} className="h-4 w-4" fill={i < t.rating ? 'currentColor' : 'none'} />)}</div>
-              <figcaption className="mt-3 flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-solid to-deep text-ink text-xs font-bold">{t.name[0]}</span>
-                <span><span className="block text-sm font-semibold">{t.name}</span><span className="text-xs text-muted">{t.role}</span></span>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-        <p className="mt-3 text-xs text-muted">These testimonials are sample content created for the design demo.</p>
-      </Section>
-
       <Section id="about" eyebrow="About TUSKY" title="Analytics first, hype never">
         <div className="grid gap-6 lg:grid-cols-3">
           <p className="text-muted lg:col-span-2">
-            TUSKY combines historical results, player form, venue and weather signals into transparent match probabilities. Every prediction shows its reasoning — team analysis, head-to-head records and key insights — so you can make up your own mind. Predictions are for entertainment and analysis only and never guarantee outcomes.
+            TUSKY turns past match results into win probabilities, shown with recent form, head-to-head records and the ratings behind them. The model does not know about injuries or line-ups. Predictions are for entertainment and analysis only and never guarantee outcomes.
           </p>
           <div className="card">
             <p className="font-semibold">Ready to start?</p>
