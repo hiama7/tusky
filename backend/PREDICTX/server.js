@@ -3,6 +3,7 @@ import { env } from './src/config/env.js';
 import { prisma } from './src/config/database.js';
 import { createApp } from './src/app.js';
 import { logger } from './src/utils/logger.js';
+import { syncMlPredictions } from './src/services/mlSyncService.js';
 
 async function main() {
   await prisma.$connect();
@@ -12,6 +13,22 @@ async function main() {
     logger.info(`PREDICTX API listening on http://localhost:${env.PORT} (${env.NODE_ENV})`);
     if (!env.razorpayEnabled) logger.warn('Razorpay keys are not set — online payments are disabled until RAZORPAY_KEY_ID/SECRET are configured.');
   });
+
+  // Optional automatic ML sync (never overlapping; a failure is logged and retried next time).
+  let syncing = false;
+  if (env.ML_SYNC_INTERVAL_MINUTES > 0 && env.ML_DATABASE_URL) {
+    setInterval(async () => {
+      if (syncing) return;
+      syncing = true;
+      try {
+        logger.info({ stats: await syncMlPredictions({ publish: env.ML_SYNC_PUBLISH }) }, 'ML sync done');
+      } catch (err) {
+        logger.error({ err }, 'ML sync failed');
+      } finally {
+        syncing = false;
+      }
+    }, env.ML_SYNC_INTERVAL_MINUTES * 60_000).unref();
+  }
 
   const shutdown = (signal) => {
     logger.info(`${signal} received, shutting down`);

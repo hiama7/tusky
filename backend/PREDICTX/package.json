@@ -17,6 +17,7 @@
     "db:seed": "node --env-file-if-exists=.env prisma/seed.js",
     "db:reset": "prisma migrate reset --force",
     "create-admin": "node --env-file-if-exists=.env scripts/create-admin.js",
+    "ml:sync": "node --env-file-if-exists=.env scripts/ml-sync.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -35,6 +36,7 @@
     "multer": "^2.5.0",
     "nodemailer": "^10.6.1",
     "pino": "^10.4.0",
+    "pg": "^8.23.1",
     "razorpay": "^2.9.8",
     "zod": "^4.6.7"
   },

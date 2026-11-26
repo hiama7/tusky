@@ -7,6 +7,8 @@ import * as analytics from '../services/analyticsService.js';
 import * as payments from '../services/paymentService.js';
 import * as subs from '../services/subscriptionService.js';
 import * as integrations from '../services/sportsDataService.js';
+import { syncMlPredictions } from '../services/mlSyncService.js';
+import { env } from '../config/env.js';
 import { revokeAllSessions } from '../services/authService.js';
 import { adminLog } from '../services/notificationService.js';
 import * as S from '../services/serializers.js';
@@ -214,8 +216,15 @@ export async function adminLogs(req, res) {
   ok(res, { items: rows.map((l) => ({ id: l.id, admin: l.admin.fullName, action: l.action, description: l.description, entityType: l.entityType, entityId: l.entityId, ip: l.ipAddress, date: l.createdAt })), pagination: meta(total) });
 }
 
+export async function syncMl(req, res) {
+  const { publish, days } = req.valid.body;
+  const stats = await syncMlPredictions({ publish, days, adminId: req.admin.id });
+  await adminLog(req, 'ML_SYNC', `ML sync${publish ? ' (published)' : ' (drafts)'}: ${stats.predictionsCreated} new, ${stats.predictionsUpdated} updated, ${stats.resultsRecorded} results`, { entityType: 'prediction' });
+  ok(res, stats, 'ML predictions synced');
+}
+
 export async function integrationStatus(_req, res) {
-  ok(res, integrations.integrationStatus());
+  ok(res, { ...integrations.integrationStatus(), ml: { configured: Boolean(env.ML_DATABASE_URL) } });
 }
 
 export async function importNews(req, res) {

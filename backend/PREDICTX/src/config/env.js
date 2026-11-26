@@ -31,6 +31,13 @@ const schema = z.object({
   SPORTS_DATA_API_KEY: z.string().optional().default(''),
   NEWS_PROVIDER: z.string().default('none'),
   NEWS_API_KEY: z.string().optional().default(''),
+  // The ML service's Postgres database (read-only). Empty = ML sync disabled.
+  ML_DATABASE_URL: z.string().optional().default(''),
+  ML_PREDICTION_PRICE: z.coerce.number().min(0).max(100000).default(49),
+  ML_SYNC_DAYS: z.coerce.number().int().min(1).max(60).default(14),
+  // 0 = no automatic sync. Automatic syncs import drafts unless ML_SYNC_PUBLISH=true.
+  ML_SYNC_INTERVAL_MINUTES: z.coerce.number().int().min(0).default(0),
+  ML_SYNC_PUBLISH: bool,
   LOG_LEVEL: z.string().default('info'),
   // Reports group revenue by local day; 330 = IST (UTC+5:30).
   REPORT_TZ_OFFSET_MINUTES: z.coerce.number().int().min(-720).max(840).default(330),

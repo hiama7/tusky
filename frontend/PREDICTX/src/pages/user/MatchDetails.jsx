@@ -52,6 +52,8 @@ function FormDots({ form }) {
 
 /** The analysis sections — rendered blurred (with placeholder data) when locked. */
 function Analysis({ match, p, locked }) {
+  // The ML model has no player or strengths data: hide those blocks rather than show empty ones.
+  const hasNotes = [p.teamA, p.teamB].some((t) => t.strengths.length || t.weaknesses.length);
   return (
     <div className={cx('grid gap-5 lg:grid-cols-2', locked && 'locked-blur')} aria-hidden={locked}>
       <Panel icon={Users} title="Team analysis" className="lg:col-span-2">
@@ -62,16 +64,18 @@ function Analysis({ match, p, locked }) {
                 <div className="flex items-center gap-2 font-medium"><TeamCrest team={team} size="sm" /> {team.name}</div>
                 <FormDots form={p[key].form} />
               </div>
+              {hasNotes && <>
               <p className="mt-4 text-xs uppercase tracking-wider text-muted">Strengths</p>
               <ul className="mt-2 space-y-1.5 text-sm">{p[key].strengths.map((s, i) => <li key={i} className="flex gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green" />{s}</li>)}</ul>
               <p className="mt-4 text-xs uppercase tracking-wider text-muted">Watch-outs</p>
               <ul className="mt-2 space-y-1.5 text-sm">{p[key].weaknesses.map((s, i) => <li key={i} className="flex gap-2"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-orange" />{s}</li>)}</ul>
+              </>}
             </div>
           ))}
         </div>
       </Panel>
 
-      <Panel icon={BarChart3} title="Player statistics">
+      {p.players.length > 0 && <Panel icon={BarChart3} title="Player statistics">
         <ul className="space-y-4">
           {p.players.map((pl, i) => (
             <li key={i}>
@@ -83,10 +87,10 @@ function Analysis({ match, p, locked }) {
             </li>
           ))}
         </ul>
-        <p className="mt-3 text-[11px] text-muted">Form rating out of 100 (sample model output).</p>
-      </Panel>
+        <p className="mt-3 text-[11px] text-muted">Form rating out of 100{match.isDemo ? ' (sample data)' : ''}.</p>
+      </Panel>}
 
-      <Panel icon={Swords} title="Head-to-head record">
+      <Panel icon={Swords} title="Head-to-head record" className={p.players.length ? '' : 'lg:col-span-2'}>
         <div className="grid grid-cols-3 gap-3 text-center">
           <div className="rounded-xl bg-white/5 p-3"><p className="font-display text-2xl font-bold" style={{ color: match.teamA.color }}>{p.h2h.aWins}</p><p className="text-xs text-muted">{match.teamA.short} wins</p></div>
           <div className="rounded-xl bg-white/5 p-3"><p className="font-display text-2xl font-bold text-muted">{p.h2h.draws}</p><p className="text-xs text-muted">Draws / NR</p></div>
@@ -240,7 +244,7 @@ export default function MatchDetails() {
                 <div className="glass w-full max-w-md p-6 text-center shadow-2xl animate-scale-in" style={{ background: 'linear-gradient(160deg,rgba(21,29,46,.95),rgba(16,22,37,.95))' }}>
                   <div className="pulse-ring mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange/15"><Lock className="h-7 w-7 text-orange" /></div>
                   <h2 className="mt-4 text-xl font-bold">Unlock Detailed Match Prediction</h2>
-                  <p className="mt-1 text-sm text-muted">Win probabilities, team analysis, player stats, head-to-head and insights.</p>
+                  <p className="mt-1 text-sm text-muted">Win probabilities, recent form, head-to-head and match insights.</p>
                   <p className="mt-4 font-display text-4xl font-bold">{inr(access.price)}</p>
                   {onSale ? (
                     <>
@@ -264,7 +268,7 @@ export default function MatchDetails() {
 
           {/* Detailed analysis (blurred placeholders when locked) */}
           <div className="relative">
-            {!unlocked && <p className="mb-3 flex items-center gap-2 text-sm text-muted"><Lock className="h-4 w-4 text-orange" /> Preview — unlock to reveal team analysis, player statistics, head-to-head records and match insights.</p>}
+            {!unlocked && <p className="mb-3 flex items-center gap-2 text-sm text-muted"><Lock className="h-4 w-4 text-orange" /> Preview — unlock to reveal recent form, head-to-head records and match insights.</p>}
             <Analysis match={match} p={p} locked={!unlocked} />
           </div>
 

@@ -26,6 +26,7 @@ export default defineConfig({
       RAZORPAY_KEY_SECRET: 'unit_test_key_secret',
       RAZORPAY_WEBHOOK_SECRET: 'unit_test_webhook_secret',
       SMTP_HOST: '',
+      ML_DATABASE_URL: '', // tests inject their own ML data
       APP_URL: 'http://localhost:5173',
       CORS_ORIGINS: 'http://localhost:5173',
     },

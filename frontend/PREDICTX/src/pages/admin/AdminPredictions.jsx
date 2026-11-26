@@ -2,11 +2,11 @@
 // probabilities (two- or three-outcome), analysis, confidence and version history.
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Send, EyeOff, Search, History } from 'lucide-react';
+import { Plus, Pencil, Trash2, Send, EyeOff, Search, History, RefreshCw } from 'lucide-react';
 import { Chips, DataTable, EmptyState, Field, Modal, PageHeader, ProbBar, Skeleton, StatusBadge, TeamCrest } from '../../components/ui';
 import { useAsync } from '../../hooks/useAsync';
 import { useToast } from '../../context/ToastContext';
-import { deletePrediction, getAdminMatches, getAdminPrediction, getAdminPredictions, publishPrediction, savePrediction, unpublishPrediction } from '../../services/admin';
+import { deletePrediction, getAdminMatches, getAdminPrediction, getAdminPredictions, publishPrediction, savePrediction, syncMlPredictions, unpublishPrediction } from '../../services/admin';
 import { cx, fmtDateTime } from '../../utils/format';
 
 const lines = (t) => t.split('\n').map((s) => s.trim()).filter(Boolean);
@@ -70,6 +70,7 @@ export default function AdminPredictions() {
   const [busy, setBusy] = useState(false);
   const [del, setDel] = useState(null);
   const [versions, setVersions] = useState(null);
+  const [syncing, setSyncing] = useState(false);
   const { data, loading, error } = useAsync(() => getAdminPredictions({ q, status: tab === 'all' ? undefined : tab }), [q, tab]);
   const { data: matches } = useAsync(() => getAdminMatches(), []);
 
@@ -104,12 +105,25 @@ export default function AdminPredictions() {
     try { await fn(); toast.success(msg); } catch (e) { toast.error(e.message); }
   }
 
+  // Imports the model's predictions as drafts: nothing reaches customers until an admin publishes it.
+  async function syncModel() {
+    setSyncing(true);
+    try {
+      const s = await syncMlPredictions(false);
+      toast.success(`${s.predictionsCreated} new draft(s), ${s.predictionsUpdated} updated, ${s.resultsRecorded} result(s).${s.liveNotUpdated ? ` ${s.liveNotUpdated} published prediction(s) have newer numbers and were left as they are.` : ''}${s.failed ? ` ${s.failed} failed.` : ''}`, 'ML model synced');
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   const total = Number(form?.teamAProbability || 0) + Number(form?.teamBProbability || 0) + (form?.outcomeFormat === 'THREE_WAY' ? Number(form?.drawProbability || 0) : 0);
 
   if (error) return <EmptyState title="Couldn’t load predictions" text={error.message} />;
   return (
     <>
-      <PageHeader title="Predictions" subtitle="Enter probabilities and analysis, save drafts, publish versions." actions={<button className="btn-primary" onClick={() => { setErrors({}); setForm(EMPTY); }}><Plus className="h-4 w-4" /> Add Prediction</button>} />
+      <PageHeader title="Predictions" subtitle="Enter probabilities and analysis, save drafts, publish versions." actions={<div className="flex flex-wrap gap-2"><button className="btn-ghost" onClick={syncModel} disabled={syncing}>{syncing ? <span className="spinner" /> : <RefreshCw className="h-4 w-4" />} Sync ML model</button><button className="btn-primary" onClick={() => { setErrors({}); setForm(EMPTY); }}><Plus className="h-4 w-4" /> Add Prediction</button></div>} />
       <div className="glass mb-5 flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
         <Chips options={[{ value: 'all', label: 'All' }, { value: 'published', label: 'Published' }, { value: 'draft', label: 'Drafts & unpublished' }]} value={tab} onChange={setTab} />
         <label className="relative md:w-72"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input className="input pl-9" placeholder="Search by team…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search predictions" /></label>
@@ -222,6 +236,7 @@ export default function AdminPredictions() {
               <Field label="Weather"><textarea rows={2} className="input" value={form.weatherAnalysis} onChange={set('weatherAnalysis')} /></Field>
             </div>
             <p className="text-xs text-muted">Enter only information you have verified — don’t invent statistics.</p>
+            {form.source === 'MODEL' && <p className="text-xs text-orange">The next ML sync can replace edits to a model prediction. Set Source to “Manual” to keep yours.</p>}
 
             <div className="flex flex-wrap justify-end gap-2 border-t border-white/5 pt-4">
               <button type="button" className="btn-ghost" onClick={() => setForm(null)}>Cancel</button>

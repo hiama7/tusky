@@ -9,6 +9,8 @@ export const getRevenueSeries = (range) => get('/admin/analytics/revenue', { ...
 export const getAnalyticsOverview = () => get('/admin/analytics/overview', A);
 export const getAdminLogs = () => get('/admin/logs', { ...A, query: { limit: 50 } }).then((d) => d.items);
 export const getIntegrations = () => get('/admin/integrations', A);
+/** Copies the ML model's upcoming predictions into the platform. publish=false imports drafts. */
+export const syncMlPredictions = (publish) => post('/admin/integrations/ml/sync', { publish }, A);
 export const importNews = () => post('/admin/integrations/news/import', undefined, A);
 
 // users

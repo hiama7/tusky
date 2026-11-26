@@ -68,5 +68,6 @@ r.put('/plans/:id', byId, validate({ body: v.planBody }), a.updatePlan);
 // external data integrations
 r.get('/integrations', a.integrationStatus);
 r.post('/integrations/news/import', a.importNews);
+r.post('/integrations/ml/sync', validate({ body: v.mlSyncBody }), a.syncMl);
 
 export default r;

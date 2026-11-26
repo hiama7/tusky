@@ -248,3 +248,25 @@ stores an immutable snapshot in `prediction_versions`. Verified match results li
 `match_results`, separate from predictions, and
 `GET /api/admin/analytics/overview` reports accuracy using only predictions published before
 kick-off.
+
+## ML predictions
+
+The TUSKY ML service (`ml-service/`) stores its predictions in the TUSKY Postgres. The backend copies them into PREDICTX; the frontend needs nothing else, because they arrive as ordinary matches and predictions behind the same paywall.
+
+```powershell
+docker compose up -d postgres          # TUSKY database (from the repository root)
+npm run ml:predict                     # (repository root) refresh the model's predictions
+npm run db:deploy                      # (backend/PREDICTX) once, adds matches.externalId
+npm run ml:sync                        # import as drafts
+npm run ml:sync -- --publish --days 3  # or publish the next three days
+```
+
+- Set `ML_DATABASE_URL` in `.env` (see `.env.example`). The ML database is only read.
+- Admins can also import drafts with **Sync ML model** on the Predictions page, then publish them one by one.
+- `ML_SYNC_INTERVAL_MINUTES` runs the sync automatically; it imports drafts unless `ML_SYNC_PUBLISH=true`.
+- Only upcoming matches are imported or changed, so a stored prediction is always a pre-match one. Results of imported matches are recorded when the ML service has them.
+- A sync never overwrites a `MANUAL` prediction or result, never republishes a prediction an admin unpublished, and leaves a match's price and flags alone. It can replace edits to a prediction whose source is still `MODEL`.
+- A published prediction changes only on a `--publish` sync, as a new version.
+- The confidence label says how decisive the probabilities are (three outcomes: High from 60%, Medium from 45%; two outcomes: 70% and 58%). It is not an accuracy figure.
+- The model uses past results only. Player analysis, strengths, pitch and weather are left empty.
+- Before charging for these predictions, replace or license the development-only data behind them (see `docs/reports/final-report-2026-11.md`, section 8).
