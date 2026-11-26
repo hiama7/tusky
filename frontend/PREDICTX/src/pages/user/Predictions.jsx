@@ -34,7 +34,7 @@ export default function Predictions() {
       const f = favourite(p);
       return <div className="w-40"><p className="mb-1 text-xs">{f.label} <b>{f.value}%</b></p><ProbBar value={f.value} /></div>;
     } },
-    { key: 'confidence', label: 'Confidence', render: (p) => (p.unlocked ? <span className="badge-purple"><Gauge className="h-3 w-3" />{p.preview.confidence}</span> : <span className="text-muted">—</span>) },
+    { key: 'confidence', label: 'Confidence', render: (p) => (p.unlocked ? <span className="badge-accent"><Gauge className="h-3 w-3" />{p.preview.confidence}</span> : <span className="text-muted">—</span>) },
     { key: 'action', label: '', render: (p) => (
       <Link to={`/user/match/${p.matchId}`} className={p.unlocked ? 'btn-ghost btn-sm' : 'btn-primary btn-sm'}>
         {p.unlocked ? <><Unlock className="h-3.5 w-3.5" /> View</> : <><Lock className="h-3.5 w-3.5" /> Unlock {inr(p.match.price)}</>}

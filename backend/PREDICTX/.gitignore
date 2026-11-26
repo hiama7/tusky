@@ -7,3 +7,4 @@ logs/*
 uploads/*
 !uploads/.gitkeep
 coverage/
+.demo-hidden.json

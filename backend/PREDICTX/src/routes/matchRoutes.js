@@ -17,6 +17,7 @@ const r = Router();
 r.get('/', optionalUser, validate({ query: matchQuery }), c.listMatches);
 r.get('/results', c.matchResults);
 r.get('/:id', optionalUser, validate({ params: idParam }), c.matchDetails);
+r.get('/:id/standings', validate({ params: idParam }), c.matchStandings);
 r.get('/:id/prediction', optionalUser, validate({ params: idParam }), p.getPrediction);
 
 export default r;

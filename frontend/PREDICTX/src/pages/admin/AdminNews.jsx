@@ -72,7 +72,7 @@ export default function AdminNews() {
 
       <DataTable loading={loading} rows={data || []} empty="No articles found." columns={[
         { key: 'title', label: 'Article', render: (n) => <div className="flex items-center gap-3 text-left">{n.image && <img src={n.image} alt="" className="h-10 w-14 rounded-lg object-cover" />}<p className="line-clamp-2 max-w-xs font-medium">{n.title}</p></div> },
-        { key: 'category', label: 'Category', render: (n) => <span className="badge-blue">{n.category}</span> },
+        { key: 'category', label: 'Category', render: (n) => <span className="badge-brand">{n.category}</span> },
         { key: 'date', label: 'Publish date', render: (n) => <span className="text-muted">{n.publishedAt ? fmtDateTime(n.publishedAt) : '—'}</span> },
         { key: 'views', label: 'Views', render: (n) => num(n.views) },
         { key: 'status', label: 'Status', render: (n) => <span className="flex items-center gap-1.5"><StatusBadge status={statusLabel(n)} />{n.source === 'PROVIDER' && <span className="badge-muted">Imported</span>}</span> },
@@ -101,8 +101,8 @@ export default function AdminNews() {
             <Field label="Article body" error={errors.content}><textarea rows={8} className={cx('input', errors.content && 'input-error')} value={form.content} onChange={set('content')} /></Field>
             <Field label="Cover image" hint="If you skip this, a sport illustration is shown."><ImageUpload current={form.image} onChange={setImage} onError={toast.error} /></Field>
             <div className="flex flex-wrap gap-5 text-sm text-muted">
-              <label className="flex items-center gap-2"><input type="checkbox" className="accent-blue" checked={form.featured} onChange={set('featured')} /> Featured</label>
-              <label className="flex items-center gap-2"><input type="checkbox" className="accent-blue" checked={form.trending} onChange={set('trending')} /> Trending</label>
+              <label className="flex items-center gap-2"><input type="checkbox" className="accent-brand" checked={form.featured} onChange={set('featured')} /> Featured</label>
+              <label className="flex items-center gap-2"><input type="checkbox" className="accent-brand" checked={form.trending} onChange={set('trending')} /> Trending</label>
             </div>
             <div className="flex justify-end gap-2 border-t border-white/5 pt-4">
               <button type="button" className="btn-ghost" onClick={() => setForm(null)}>Cancel</button>

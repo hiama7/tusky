@@ -10,10 +10,10 @@ import { cx } from '../../utils/format';
 /* ---------- Brand logo ---------- */
 export function Logo({ to = '/', admin = false, className = '' }) {
   return (
-    <Link to={to} className={cx('flex items-center gap-2.5 font-display', className)} aria-label="TUSKY home">
-      <img src="assets/logos/tusky-mark.svg" alt="" className="h-9 w-9" />
-      <span className="text-xl font-bold tracking-tight">
-        TUSKY{admin && <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-widest text-purple">Admin</span>}
+    <Link to={to} className={cx('group flex items-center gap-2.5 font-display', className)} aria-label="TUSKY home">
+      <img src="assets/logos/tusky-mark.svg?v=2" alt="" className="h-10 w-10 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110" />
+      <span className="text-xl font-bold uppercase tracking-[.14em]">
+        TUS<span className="text-brand">KY</span>{admin && <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-widest text-accent">Admin</span>}
       </span>
     </Link>
   );
@@ -55,7 +55,7 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }) {
   return createPortal(
     <div className="fixed inset-0 z-[90] flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" style={{ animation: 'fade-up .2s ease both' }} onClick={onClose} />
-      <div className={cx('glass relative flex max-h-[92vh] w-full flex-col rounded-b-none sm:rounded-2xl shadow-2xl animate-scale-in', width)} style={{ background: 'linear-gradient(160deg,#151D2E,#101625)' }}>
+      <div className={cx('glass relative flex max-h-[92vh] w-full flex-col rounded-b-none sm:rounded-2xl shadow-2xl animate-scale-in', width)} style={{ background: 'linear-gradient(160deg,#090E1D,#060914)' }}>
         <div className="flex items-center justify-between border-b border-white/5 px-5 py-4">
           <h3 className="text-lg font-semibold">{title}</h3>
           <button onClick={onClose} className="rounded-lg p-1.5 text-muted hover:bg-white/5 hover:text-white" aria-label="Close dialog"><X className="h-5 w-5" /></button>
@@ -81,6 +81,7 @@ export function AnimatedNumber({ value, prefix = '', suffix = '', duration = 140
   useEffect(() => {
     const el = ref.current;
     let raf;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setShown(value); return undefined; }
     const start = () => {
       const t0 = performance.now();
       const tick = (t) => {
@@ -100,8 +101,8 @@ export function AnimatedNumber({ value, prefix = '', suffix = '', duration = 140
 }
 
 /* ---------- Stat card ---------- */
-export function StatCard({ icon: Icon, label, value, hint, color = 'blue', demo = false, className = '' }) {
-  const tones = { blue: 'bg-blue/15 text-blue', purple: 'bg-purple/15 text-purple', green: 'bg-green/15 text-green', orange: 'bg-orange/15 text-orange', red: 'bg-red/15 text-red' };
+export function StatCard({ icon: Icon, label, value, hint, color = 'brand', demo = false, className = '' }) {
+  const tones = { brand: 'bg-brand/15 text-brand', accent: 'bg-accent/15 text-accent', green: 'bg-green/15 text-green', orange: 'bg-orange/15 text-orange', red: 'bg-red/15 text-red' };
   return (
     <div className={cx('card card-lift page-enter', className)}>
       <div className="flex items-start justify-between gap-3">
@@ -116,7 +117,7 @@ export function StatCard({ icon: Icon, label, value, hint, color = 'blue', demo 
 }
 
 /* ---------- Probability bar ---------- */
-export function ProbBar({ value, color = '#386BFF', label, delay = 0 }) {
+export function ProbBar({ value, color = '#39FF14', label, delay = 0 }) {
   return (
     <div>
       {label && (
@@ -126,7 +127,7 @@ export function ProbBar({ value, color = '#386BFF', label, delay = 0 }) {
         </div>
       )}
       <div className="bar-track">
-        <div className="bar-fill" style={{ width: `${value}%`, background: `linear-gradient(90deg, ${color}, ${color}aa)`, animationDelay: `${delay}ms` }} />
+        <div className="bar-fill" style={{ width: `${value}%`, background: `linear-gradient(90deg, ${color}99, ${color})`, boxShadow: `0 0 12px ${color}88`, animationDelay: `${delay}ms` }} />
       </div>
     </div>
   );
@@ -138,7 +139,7 @@ export function TeamCrest({ team, size = 'md' }) {
   return (
     <div
       className={cx('relative flex shrink-0 items-center justify-center rounded-2xl font-display font-bold tracking-wider text-white shadow-lg', s)}
-      style={{ background: `linear-gradient(145deg, ${team.color}, ${team.color}55)`, boxShadow: `0 8px 24px -10px ${team.color}` }}
+      style={{ background: `radial-gradient(circle at 28% 20%, #ffffff55, transparent 42%), linear-gradient(145deg, ${team.color}, ${team.color}44)`, boxShadow: `0 10px 28px -10px ${team.color}, inset 0 -10px 18px -10px #0008` }}
       aria-hidden="true"
     >
       <span className="absolute inset-[3px] rounded-[13px] border border-white/20" />
@@ -230,10 +231,10 @@ export function DataTable({ columns, rows, empty = 'No records found.', loading 
 /* ---------- Status badge mapping ---------- */
 const STATUS_TONE = {
   Active: 'badge-green', Success: 'badge-green', published: 'badge-green', Published: 'badge-green', used: 'badge-muted',
-  Pending: 'badge-orange', draft: 'badge-orange', Trial: 'badge-purple', available: 'badge-green',
-  Expired: 'badge-muted', None: 'badge-muted', Cancelled: 'badge-red', Failed: 'badge-red', Blocked: 'badge-red', Refunded: 'badge-blue',
-  'Partially refunded': 'badge-blue', Draft: 'badge-orange', Unpublished: 'badge-muted', Scheduled: 'badge-purple', Archived: 'badge-muted',
-  UPCOMING: 'badge-blue', LIVE: 'badge-red', COMPLETED: 'badge-green', CANCELLED: 'badge-muted', POSTPONED: 'badge-orange',
+  Pending: 'badge-orange', draft: 'badge-orange', Trial: 'badge-accent', available: 'badge-green',
+  Expired: 'badge-muted', None: 'badge-muted', Cancelled: 'badge-red', Failed: 'badge-red', Blocked: 'badge-red', Refunded: 'badge-brand',
+  'Partially refunded': 'badge-brand', Draft: 'badge-orange', Unpublished: 'badge-muted', Scheduled: 'badge-accent', Archived: 'badge-muted',
+  UPCOMING: 'badge-brand', LIVE: 'badge-red', COMPLETED: 'badge-green', CANCELLED: 'badge-muted', POSTPONED: 'badge-orange',
   PUBLISHED: 'badge-green', DRAFT: 'badge-orange', UNPUBLISHED: 'badge-muted', Available: 'badge-green', Used: 'badge-muted',
 };
 export const StatusBadge = ({ status }) => <span className={STATUS_TONE[status] || 'badge-muted'}>{status}</span>;

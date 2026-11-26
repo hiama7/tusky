@@ -57,7 +57,7 @@ export default function AdminTransactions() {
         <StatCard icon={CheckCircle2} color="green" label="Successful" value={(c.CAPTURED || 0) + (c.PARTIALLY_REFUNDED || 0)} />
         <StatCard icon={Clock} color="orange" label="Pending (unpaid orders)" value={c.CREATED || 0} />
         <StatCard icon={XCircle} color="red" label="Failed" value={c.FAILED || 0} />
-        <StatCard icon={Undo2} color="blue" label="Refunded" value={(c.REFUNDED || 0) + (c.PARTIALLY_REFUNDED || 0)} />
+        <StatCard icon={Undo2} color="brand" label="Refunded" value={(c.REFUNDED || 0) + (c.PARTIALLY_REFUNDED || 0)} />
       </div>
       <div className="glass mb-5 grid gap-3 p-4 md:grid-cols-[1fr_180px_180px]">
         <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input className="input pl-9" placeholder="Search reference, payment id, customer…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search transactions" /></label>
@@ -65,7 +65,7 @@ export default function AdminTransactions() {
         <select className="input" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status"><option value="all">All statuses</option><option>Success</option><option>Pending</option><option>Failed</option><option>Refunded</option><option>Partially refunded</option></select>
       </div>
       <DataTable loading={loading} rows={rows} empty="No transactions match these filters." columns={[
-        { key: 'id', label: 'Reference', render: (t) => <button className="font-mono text-xs text-blue hover:underline" onClick={() => setView(t)}>{t.id}</button> },
+        { key: 'id', label: 'Reference', render: (t) => <button className="font-mono text-xs text-brand hover:underline" onClick={() => setView(t)}>{t.id}</button> },
         { key: 'customer', label: 'Customer', render: (t) => <span className="font-medium">{t.customer}</span> },
         { key: 'item', label: 'Match / Item', render: (t) => <span className="text-muted">{t.item}{t.isDuplicate && <span className="badge-orange ml-2">Duplicate</span>}</span> },
         { key: 'amount', label: 'Amount', render: (t) => <b>{inr(t.amount)}</b> },

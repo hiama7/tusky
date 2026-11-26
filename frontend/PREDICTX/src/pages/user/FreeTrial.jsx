@@ -54,11 +54,8 @@ export default function FreeTrial() {
   return (
     <div className="space-y-8">
       <section className="glass relative overflow-hidden p-8 text-center md:p-12">
-        <div className="grid-bg absolute inset-0" />
-        <div className="blob left-0 top-0 h-64 w-64 bg-green opacity-30" />
-        <div className="blob bottom-0 right-0 h-64 w-64 bg-purple opacity-30" style={{ animationDelay: '-4s' }} />
         <div className="relative">
-          <div className="mx-auto flex h-16 w-16 animate-float items-center justify-center rounded-2xl bg-gradient-to-br from-green to-blue"><Gift className="h-8 w-8 text-white" /></div>
+          <div className="mx-auto flex h-16 w-16 animate-float items-center justify-center rounded-2xl bg-gradient-to-br from-solid to-deep"><Gift className="h-8 w-8 text-ink" /></div>
           <h1 className="mt-6 text-3xl font-bold md:text-5xl">Your First Prediction <span className="text-gradient">Is On Us!</span></h1>
           <p className="mx-auto mt-3 max-w-xl text-muted">Pick any upcoming match and unlock its complete prediction for free.</p>
           <div className="mt-5 flex justify-center">

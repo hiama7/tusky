@@ -56,7 +56,7 @@ export default function Subscription() {
       {loading ? <Skeleton className="mb-8 h-36 rounded-2xl" /> : (
         <section className="glass mb-8 flex flex-col gap-5 p-6 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <div className="stat-icon h-14 w-14 bg-gradient-to-br from-blue to-purple text-white"><Crown className="h-6 w-6" /></div>
+            <div className="stat-icon h-14 w-14 bg-gradient-to-br from-solid to-deep text-ink"><Crown className="h-6 w-6" /></div>
             <div>
               <p className="text-sm text-muted">Current plan</p>
               <p className="text-xl font-bold">{current ? current.plan.name : 'No active subscription'}</p>
@@ -67,7 +67,7 @@ export default function Subscription() {
           {current ? (
             <div className="w-full md:w-72">
               <div className="mb-1.5 flex justify-between text-xs"><span className="text-muted">{days} days remaining</span><span>{total} days</span></div>
-              <div className="bar-track"><div className="bar-fill bg-gradient-to-r from-blue to-purple" style={{ width: `${(days / total) * 100}%` }} /></div>
+              <div className="bar-track"><div className="bar-fill bg-gradient-to-r from-brand to-accent" style={{ width: `${(days / total) * 100}%` }} /></div>
               <button className="btn-ghost btn-sm mt-3 text-red" onClick={() => setCancelOpen(true)}><XCircle className="h-4 w-4" /> Cancel subscription</button>
             </div>
           ) : <p className="text-sm text-muted">Choose a plan below — individual purchases stay valid either way.</p>}

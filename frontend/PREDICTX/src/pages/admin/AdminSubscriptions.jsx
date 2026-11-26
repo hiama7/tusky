@@ -55,14 +55,14 @@ export default function AdminSubscriptions() {
         <StatCard icon={CheckCircle2} color="green" label="Active subscriptions" value={c.ACTIVE || 0} />
         <StatCard icon={Clock} color="orange" label="Expired subscriptions" value={c.EXPIRED || 0} />
         <StatCard icon={XCircle} color="red" label="Cancelled subscriptions" value={c.CANCELLED || 0} />
-        <StatCard icon={IndianRupee} color="blue" label="Net subscription revenue" value={data ? inr(data.revenue.net) : '…'} hint={data ? `${inr(data.revenue.gross)} gross · ${inr(data.revenue.refunds)} refunded` : ''} />
+        <StatCard icon={IndianRupee} color="brand" label="Net subscription revenue" value={data ? inr(data.revenue.net) : '…'} hint={data ? `${inr(data.revenue.gross)} gross · ${inr(data.revenue.refunds)} refunded` : ''} />
       </div>
 
       <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold">Subscription Plans</h2><button className="btn-primary btn-sm" onClick={() => { setErrors({}); setPlan(EMPTY_PLAN); }}><Plus className="h-3.5 w-3.5" /> New plan</button></div>
       <div className="mb-8 grid gap-4 md:grid-cols-3">
         {(plans || []).map((p) => (
           <div key={p.id} className={cx('card card-lift', p.status === 'INACTIVE' && 'opacity-60')}>
-            <div className="flex items-center justify-between"><p className="flex items-center gap-2 font-semibold"><Crown className="h-4 w-4 text-purple" /> {p.name}</p><span className="flex gap-1">{p.popular && <span className="badge-blue">Popular</span>}<StatusBadge status={p.status === 'ACTIVE' ? 'Active' : 'Inactive'} /></span></div>
+            <div className="flex items-center justify-between"><p className="flex items-center gap-2 font-semibold"><Crown className="h-4 w-4 text-accent" /> {p.name}</p><span className="flex gap-1">{p.popular && <span className="badge-brand">Popular</span>}<StatusBadge status={p.status === 'ACTIVE' ? 'Active' : 'Inactive'} /></span></div>
             <p className="mt-3 font-display text-2xl font-bold">{inr(p.price)}<span className="text-sm font-normal text-muted"> / {p.days} days</span></p>
             <p className="mt-1 text-xs text-muted">{p.allSports ? 'All sports' : `Sports: ${p.sports.join(', ')}`}</p>
             <div className="mt-4 flex items-center justify-between text-xs"><span className="text-muted">{data?.perPlan?.[p.id] || 0} subscriptions sold</span><button className="btn-ghost btn-sm" onClick={() => editPlan(p)}><Pencil className="h-3.5 w-3.5" /> Edit</button></div>
@@ -93,7 +93,7 @@ export default function AdminSubscriptions() {
             <Field label="Features (one per line)" className="sm:col-span-2"><textarea rows={4} className="input" value={plan.features} onChange={set('features')} /></Field>
             <div className="sm:col-span-2">
               <p className="label">Access policy</p>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-blue" checked={plan.allSports} onChange={set('allSports')} /> Unlocks predictions for all sports</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-brand" checked={plan.allSports} onChange={set('allSports')} /> Unlocks predictions for all sports</label>
               {!plan.allSports && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {(catalogue?.sports || []).map((s) => {
@@ -105,7 +105,7 @@ export default function AdminSubscriptions() {
               {errors.sportIds && <p className="field-error">{errors.sportIds}</p>}
             </div>
             <Field label="Status"><select className="input" value={plan.status} onChange={set('status')}><option value="ACTIVE">Active (on sale)</option><option value="INACTIVE">Inactive (hidden)</option></select></Field>
-            <label className="mt-6 flex items-center gap-2 text-sm text-muted"><input type="checkbox" className="accent-blue" checked={plan.popular} onChange={set('popular')} /> Highlight as “Most popular”</label>
+            <label className="mt-6 flex items-center gap-2 text-sm text-muted"><input type="checkbox" className="accent-brand" checked={plan.popular} onChange={set('popular')} /> Highlight as “Most popular”</label>
             <div className="flex justify-end gap-2 border-t border-white/5 pt-4 sm:col-span-2">
               <button type="button" className="btn-ghost" onClick={() => setPlan(null)}>Cancel</button>
               <button className="btn-primary" disabled={busy}>{busy ? <span className="spinner" /> : 'Save plan'}</button>

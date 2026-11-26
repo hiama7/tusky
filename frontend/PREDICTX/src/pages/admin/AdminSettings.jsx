@@ -116,7 +116,7 @@ function AdminPassword() {
   }
   return (
     <form onSubmit={submit} noValidate className="card space-y-3">
-      <h2 className="flex items-center gap-2 font-semibold"><KeyRound className="h-4 w-4 text-blue" /> Change admin password</h2>
+      <h2 className="flex items-center gap-2 font-semibold"><KeyRound className="h-4 w-4 text-brand" /> Change admin password</h2>
       <Field label="Current password" error={errors.current}><PasswordInput error={errors.current} value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} /></Field>
       <Field label="New password" error={errors.next}><PasswordInput error={errors.next} value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} /></Field>
       <Field label="Confirm new password" error={errors.confirm}><PasswordInput error={errors.confirm} value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} /></Field>
@@ -144,7 +144,7 @@ export default function AdminSettings() {
             <p className="mt-3 text-xs text-muted">New administrators are created on the server with <code className="rounded bg-white/5 px-1">npm run create-admin</code>. Admin rights can’t be granted from the website.</p>
           </section>
           <section className="card">
-            <h2 className="flex items-center gap-2 font-semibold"><Plug className="h-4 w-4 text-purple" /> Data providers</h2>
+            <h2 className="flex items-center gap-2 font-semibold"><Plug className="h-4 w-4 text-accent" /> Data providers</h2>
             {integrations ? (
               <ul className="mt-3 space-y-2 text-sm">
                 <li className="flex justify-between"><span>Sports data</span><span className={cx(integrations.sportsData.configured ? 'text-green' : 'text-muted')}>{integrations.sportsData.provider}</span></li>

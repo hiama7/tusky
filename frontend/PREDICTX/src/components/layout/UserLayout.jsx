@@ -36,7 +36,7 @@ function NotificationsMenu({ userId }) {
   const { data } = useAsync(() => getNotifications(), [userId]);
   const list = data?.items || [];
   const unread = data?.unread || 0;
-  const dot = { success: 'bg-green', info: 'bg-blue', warning: 'bg-orange', error: 'bg-red' };
+  const dot = { success: 'bg-green', info: 'bg-brand', warning: 'bg-orange', error: 'bg-red' };
   return (
     <div className="relative" ref={ref}>
       <button onClick={() => setOpen((o) => !o)} className="relative rounded-xl border border-white/10 bg-white/5 p-2.5 hover:bg-white/10" aria-label={`Notifications (${unread} unread)`} aria-expanded={open}>
@@ -47,12 +47,12 @@ function NotificationsMenu({ userId }) {
         <div className="dropdown w-[min(22rem,calc(100vw-2rem))]">
           <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
             <p className="text-sm font-semibold">Notifications</p>
-            <button className="text-xs text-blue hover:underline disabled:opacity-40" disabled={!unread} onClick={() => markAllRead()}>Mark all read</button>
+            <button className="text-xs text-brand hover:underline disabled:opacity-40" disabled={!unread} onClick={() => markAllRead()}>Mark all read</button>
           </div>
           <ul className="max-h-80 overflow-y-auto">
             {list.map((n) => (
-              <li key={n.id} className={cx('flex gap-3 border-b border-white/5 px-4 py-3 last:border-0', !n.read && 'bg-blue/[.04]')}>
-                <span className={cx('mt-1.5 h-2 w-2 shrink-0 rounded-full', dot[n.type] || 'bg-blue', n.read && 'opacity-30')} />
+              <li key={n.id} className={cx('flex gap-3 border-b border-white/5 px-4 py-3 last:border-0', !n.read && 'bg-brand/[.04]')}>
+                <span className={cx('mt-1.5 h-2 w-2 shrink-0 rounded-full', dot[n.type] || 'bg-brand', n.read && 'opacity-30')} />
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{n.title}</p>
                   <p className="text-xs text-muted">{n.body}</p>
@@ -95,13 +95,13 @@ export default function UserLayout() {
         <>
           <NotificationsMenu userId={user.id} />
           <Link to="/user/profile" className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-1.5 pl-1.5 pr-3 hover:bg-white/10">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue to-purple text-xs font-bold">{initials}</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-solid to-deep text-ink text-xs font-bold">{initials}</span>
             <span className="hidden text-sm sm:block">{user.name.split(' ')[0]}</span>
           </Link>
         </>
       )}
       sidebarFooter={trial?.status === 'available' ? (
-        <Link to="/user/free-trial" className="block rounded-xl bg-gradient-to-br from-blue/25 to-purple/25 p-4 text-sm transition hover:brightness-125">
+        <Link to="/user/free-trial" className="block rounded-xl bg-gradient-to-br from-brand/25 to-accent/25 p-4 text-sm transition hover:brightness-125">
           <p className="font-semibold">🎁 Free prediction</p>
           <p className="mt-1 text-xs text-muted">Your first prediction is on us — activate it now.</p>
         </Link>

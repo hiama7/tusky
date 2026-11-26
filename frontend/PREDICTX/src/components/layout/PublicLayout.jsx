@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Mail, MapPin, LayoutDashboard } from 'lucide-react';
 import { Logo } from '../ui';
+import { PointerGlow, ScrollProgress } from '../ui/effects';
 import { useAuth } from '../../context/AuthContext';
 import { cx } from '../../utils/format';
 
@@ -29,7 +30,7 @@ function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const linkCls = ({ isActive }) => cx('rounded-lg px-3 py-2 text-sm transition-colors', isActive ? 'text-white' : 'text-muted hover:text-white');
+  const linkCls = ({ isActive }) => cx('relative rounded-lg px-3 py-2 text-sm transition-colors after:absolute after:inset-x-3 after:bottom-0.5 after:h-0.5 after:origin-left after:rounded-full after:bg-gradient-to-r after:from-glow after:to-accent after:transition-transform after:duration-300', isActive ? 'text-white after:scale-x-100' : 'text-muted after:scale-x-0 hover:text-white hover:after:scale-x-100');
 
   return (
     <header className={cx('fixed inset-x-0 top-0 z-50 transition-all duration-300', scrolled ? 'border-b border-white/5 bg-ink/80 backdrop-blur-xl' : 'bg-transparent')}>
@@ -109,7 +110,6 @@ function Footer() {
       </div>
       <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-8 text-xs text-muted md:flex-row md:justify-between md:px-6">
         <p>© {new Date().getFullYear()} TUSKY. Predictions are probabilistic analysis for entertainment & research only.</p>
-        <p>Content marked “Sample” is demonstration data.</p>
       </div>
     </footer>
   );
@@ -120,6 +120,8 @@ export default function PublicLayout() {
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   return (
     <div className="relative min-h-screen overflow-x-hidden">
+      <ScrollProgress />
+      <PointerGlow />
       <Navbar />
       <main key={pathname} className="page-enter"><Outlet /></main>
       <Footer />

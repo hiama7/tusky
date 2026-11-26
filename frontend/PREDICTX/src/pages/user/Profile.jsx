@@ -42,7 +42,7 @@ function ProfileForm({ user, onSaved }) {
   return (
     <div className="grid gap-5 lg:grid-cols-3">
       <div className="card text-center">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue to-purple font-display text-2xl font-bold">{initials}</div>
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-solid to-deep text-ink font-display text-2xl font-bold">{initials}</div>
         <p className="mt-4 text-lg font-semibold">{user.name}</p>
         <p className="text-sm text-muted">{user.email}</p>
         <p className="mt-3 text-xs text-muted">Member since {fmtDate(user.registeredAt)}</p>
@@ -109,7 +109,7 @@ function SettingsPanel({ user }) {
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       <form onSubmit={savePassword} noValidate className="card space-y-4">
-        <h2 className="flex items-center gap-2 font-semibold"><KeyRound className="h-4 w-4 text-blue" /> Change password</h2>
+        <h2 className="flex items-center gap-2 font-semibold"><KeyRound className="h-4 w-4 text-brand" /> Change password</h2>
         <Field label="Current password" error={pwErr.current}><PasswordInput error={pwErr.current} autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} /></Field>
         <Field label="New password" error={pwErr.next}><PasswordInput error={pwErr.next} autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} /></Field>
         <Field label="Confirm new password" error={pwErr.confirm}><PasswordInput error={pwErr.confirm} autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} /></Field>
@@ -122,7 +122,7 @@ function SettingsPanel({ user }) {
             {PREFS.map(([k, label]) => (
               <li key={k} className="flex items-center justify-between gap-4 text-sm">
                 {label}
-                <button type="button" role="switch" aria-checked={prefs[k]} onClick={() => togglePref(k)} className={cx('relative h-6 w-11 shrink-0 rounded-full transition-colors', prefs[k] ? 'bg-blue' : 'bg-white/10')}>
+                <button type="button" role="switch" aria-checked={prefs[k]} onClick={() => togglePref(k)} className={cx('relative h-6 w-11 shrink-0 rounded-full transition-colors', prefs[k] ? 'bg-brand' : 'bg-white/10')}>
                   <span className={cx('absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all', prefs[k] ? 'left-[22px]' : 'left-0.5')} />
                 </button>
               </li>

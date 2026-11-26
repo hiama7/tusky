@@ -13,7 +13,7 @@ const STRENGTH = [
   { label: 'Too weak', color: 'bg-red' },
   { label: 'Weak', color: 'bg-red' },
   { label: 'Fair', color: 'bg-orange' },
-  { label: 'Good', color: 'bg-blue' },
+  { label: 'Good', color: 'bg-brand' },
   { label: 'Strong', color: 'bg-green' },
 ];
 
@@ -81,11 +81,11 @@ export default function Register() {
           <PasswordInput error={errors.confirm} autoComplete="new-password" value={form.confirm} onChange={set('confirm')} placeholder="Repeat password" />
         </Field>
         <Field error={errors.terms}>
-          <label className="flex items-start gap-2 text-sm text-muted"><input type="checkbox" checked={form.terms} onChange={set('terms')} className="mt-1 accent-blue" /> I agree to the Terms of Use and understand predictions are for entertainment and analysis only.</label>
+          <label className="flex items-start gap-2 text-sm text-muted"><input type="checkbox" checked={form.terms} onChange={set('terms')} className="mt-1 accent-brand" /> I agree to the Terms of Use and understand predictions are for entertainment and analysis only.</label>
         </Field>
         <button className="btn-primary btn-lg w-full" disabled={busy}>{busy ? <><span className="spinner" /> Creating account…</> : 'Register'}</button>
       </form>
-      <p className="mt-6 text-center text-sm text-muted">Already have an account? <Link to="/login" className="font-medium text-blue hover:underline">Login</Link></p>
+      <p className="mt-6 text-center text-sm text-muted">Already have an account? <Link to="/login" className="font-medium text-brand hover:underline">Login</Link></p>
     </AuthLayout>
   );
 }

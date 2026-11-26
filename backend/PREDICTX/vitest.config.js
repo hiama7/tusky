@@ -27,6 +27,9 @@ export default defineConfig({
       RAZORPAY_WEBHOOK_SECRET: 'unit_test_webhook_secret',
       SMTP_HOST: '',
       ML_DATABASE_URL: '', // tests inject their own ML data
+      FOOTBALL_DATA_API_KEY: '', // no real calls from tests
+      GNEWS_API_KEY: '',
+      NEWS_PROVIDER: 'none',
       APP_URL: 'http://localhost:5173',
       CORS_ORIGINS: 'http://localhost:5173',
     },

@@ -10,8 +10,8 @@ export default function MatchCard({ match, unlocked = match.unlocked, to, compac
   const href = to ?? `/user/match/${match.id}`;
   return (
     <article className="glass card-lift group relative flex flex-col overflow-hidden page-enter">
-      {/* accent glow in the sport colour */}
-      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full opacity-20 blur-3xl transition-opacity group-hover:opacity-40" style={{ background: sport?.color }} />
+      {/* stripe in the two teams' colours */}
+      <div className="h-1 w-full shrink-0 opacity-80" style={{ background: `linear-gradient(90deg, ${match.teamA.color}, transparent 45%, transparent 55%, ${match.teamB.color})` }} />
       <div className="flex items-center justify-between px-5 pt-4">
         <span className="badge-muted" style={{ color: sport?.color }}>{sport?.name}</span>
         <span className="text-[11px] text-muted">{startsIn(match.date)}</span>
@@ -22,7 +22,7 @@ export default function MatchCard({ match, unlocked = match.unlocked, to, compac
           <TeamCrest team={match.teamA} />
           <p className="w-full truncate text-sm font-semibold">{match.teamA.name}</p>
         </div>
-        <span className="rounded-full border border-white/10 bg-ink-2 px-2.5 py-1 font-display text-xs font-bold text-muted">VS</span>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-accent/30 bg-ink-2 font-display text-xs font-bold text-white shadow-[0_0_22px_-4px_rgba(255,255,255,.75)] transition-transform duration-500 group-hover:rotate-[360deg]">VS</span>
         <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
           <TeamCrest team={match.teamB} />
           <p className="w-full truncate text-sm font-semibold">{match.teamB.name}</p>

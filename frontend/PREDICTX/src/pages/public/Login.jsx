@@ -67,12 +67,12 @@ export default function Login() {
           <PasswordInput error={errors.password} autoComplete="current-password" value={form.password} onChange={set('password')} placeholder="••••••••" />
         </Field>
         <div className="flex items-center justify-end text-sm">
-          <button type="button" className="text-blue hover:underline" onClick={() => { setResetEmail(form.email); setForgotOpen(true); }}>Forgot password?</button>
+          <button type="button" className="text-brand hover:underline" onClick={() => { setResetEmail(form.email); setForgotOpen(true); }}>Forgot password?</button>
         </div>
         <button className="btn-primary btn-lg w-full" disabled={busy}>{busy ? <><span className="spinner" /> Signing in…</> : 'Login'}</button>
         <p className="text-center text-[11px] text-muted">You stay signed in on this device for up to 7 days. Log out on shared computers.</p>
       </form>
-      <p className="mt-6 text-center text-sm text-muted">New to TUSKY? <Link to="/register" className="font-medium text-blue hover:underline">Create Account</Link></p>
+      <p className="mt-6 text-center text-sm text-muted">New to TUSKY? <Link to="/register" className="font-medium text-brand hover:underline">Create Account</Link></p>
       <p className="mt-2 text-center text-xs text-muted">Administrator? <Link to="/admin/login" className="hover:text-white">Admin login</Link></p>
 
       <Modal open={forgotOpen} onClose={() => setForgotOpen(false)} title="Reset password" size="sm"

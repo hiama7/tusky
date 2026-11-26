@@ -15,8 +15,8 @@
   .sidebar-link:hover { @apply bg-white/5 text-white; transform: translateX(2px); }
   .sidebar-link.active {
     @apply text-white;
-    background: linear-gradient(90deg, rgba(56,107,255,.22), rgba(134,87,255,.08));
-    box-shadow: inset 2px 0 0 var(--color-blue);
+    background: linear-gradient(90deg, rgba(57,255,20,.28), rgba(255,255,255,.08));
+    box-shadow: inset 3px 0 0 var(--color-glow);
   }
 
   .main-area { @apply flex-1 min-w-0; margin-left: 16rem; }
@@ -26,7 +26,8 @@
   }
   .content { @apply px-4 md:px-8 py-6 md:py-8; }
 
-  .stat-icon { @apply flex h-11 w-11 items-center justify-center rounded-xl; }
+  .stat-icon { @apply flex h-11 w-11 items-center justify-center rounded-xl; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); transition: transform .3s ease; }
+  .card-lift:hover .stat-icon { transform: scale(1.1) rotate(-6deg); }
 
   /* Dropdown */
   .dropdown { @apply absolute right-0 mt-2 z-50 glass shadow-2xl; animation: var(--animate-scale-in); transform-origin: top right; }

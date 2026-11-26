@@ -1,7 +1,7 @@
 // Sports news interface: featured, latest (paginated), trending, search, category
 // filters, news cards and a "Read More" article modal. Data: GET /api/news.
 import { useEffect, useState } from 'react';
-import { Search, Flame, Clock, Eye, ArrowRight, Newspaper } from 'lucide-react';
+import { Search, Flame, Clock, Eye, ArrowRight, Newspaper, ExternalLink } from 'lucide-react';
 import { Chips, CardSkeleton, EmptyState, Modal, DemoTag, Skeleton } from '../ui';
 import { useAsync } from '../../hooks/useAsync';
 import { getArticle, getNews, NEWS_CATEGORIES } from '../../services/news';
@@ -15,14 +15,14 @@ function NewsCard({ item, onOpen }) {
     <article className="glass card-lift group flex flex-col overflow-hidden page-enter">
       <div className="relative h-40 overflow-hidden">
         <img src={imageFor(item)} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
-        <span className="badge-blue absolute left-3 top-3 bg-ink/70 backdrop-blur">{item.category}</span>
+        <span className="badge-brand absolute left-3 top-3 bg-ink/70 backdrop-blur">{item.category}</span>
         {item.isDemo && <DemoTag className="absolute right-3 top-3">Sample</DemoTag>}
       </div>
       <div className="flex flex-1 flex-col p-5">
         <p className="flex items-center gap-3 text-[11px] text-muted"><span className="flex items-center gap-1"><Clock className="h-3 w-3" />{timeAgo(item.date)}</span><span className="flex items-center gap-1"><Eye className="h-3 w-3" />{num(item.views)}</span></p>
         <h3 className="mt-2 line-clamp-2 font-semibold leading-snug">{item.title}</h3>
         <p className="mt-2 line-clamp-2 text-sm text-muted">{item.excerpt}</p>
-        <button onClick={() => onOpen(item)} className="mt-auto flex items-center gap-1 pt-4 text-sm font-medium text-blue transition-all hover:gap-2">Read More <ArrowRight className="h-4 w-4" /></button>
+        <button onClick={() => onOpen(item)} className="mt-auto flex items-center gap-1 pt-4 text-sm font-medium text-brand transition-all hover:gap-2">Read More <ArrowRight className="h-4 w-4" /></button>
       </div>
     </article>
   );
@@ -80,7 +80,7 @@ export default function NewsFeed() {
             <img src={imageFor(featured)} alt="" className="h-72 w-full object-cover opacity-80 transition-transform duration-700 group-hover:scale-105 md:h-80" />
             <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/60 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-6">
-              <div className="flex flex-wrap items-center gap-2"><span className="badge-purple">Featured</span><span className="badge-blue">{featured.category}</span>{featured.isDemo && <DemoTag>Sample story</DemoTag>}</div>
+              <div className="flex flex-wrap items-center gap-2"><span className="badge-accent">Featured</span><span className="badge-brand">{featured.category}</span>{featured.isDemo && <DemoTag>Sample story</DemoTag>}</div>
               <h2 className="mt-3 max-w-2xl text-2xl font-bold md:text-3xl">{featured.title}</h2>
               <p className="mt-2 line-clamp-2 max-w-2xl text-sm text-muted">{featured.excerpt}</p>
               <button onClick={() => setOpen(featured)} className="btn-primary btn-sm mt-4">Read More</button>
@@ -93,9 +93,9 @@ export default function NewsFeed() {
                 {trending.map((t, i) => (
                   <li key={t.id}>
                     <button onClick={() => setOpen(t)} className="group flex gap-3 text-left">
-                      <span className="font-display text-2xl font-bold text-white/15 group-hover:text-blue">{String(i + 1).padStart(2, '0')}</span>
+                      <span className="font-display text-2xl font-bold text-white/15 group-hover:text-brand">{String(i + 1).padStart(2, '0')}</span>
                       <span>
-                        <span className="line-clamp-2 text-sm font-medium group-hover:text-blue">{t.title}</span>
+                        <span className="line-clamp-2 text-sm font-medium group-hover:text-brand">{t.title}</span>
                         <span className="text-[11px] text-muted">{t.category} · {num(t.views)} views</span>
                       </span>
                     </button>
@@ -130,6 +130,9 @@ export default function NewsFeed() {
             <p className="mt-4 font-medium text-white/90">{open.excerpt}</p>
             {articleLoading ? <div className="mt-4 space-y-2"><Skeleton className="h-4" /><Skeleton className="h-4" /><Skeleton className="h-4 w-2/3" /></div>
               : article?.body?.split('\n').filter(Boolean).map((p, i) => <p key={i} className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted">{p}</p>)}
+            {article?.sourceUrl && (
+              <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer" className="btn-primary mt-5">Read the full story <ExternalLink className="h-4 w-4" /></a>
+            )}
           </article>
         )}
       </Modal>

@@ -35,7 +35,7 @@ export function BarChart({ labels, series, height = 280, stacked = false, money 
 }
 
 export function DonutChart({ labels, values, colors, height = 240 }) {
-  const data = { labels, datasets: [{ data: values, backgroundColor: colors || Object.values(COLORS), borderColor: '#151D2E', borderWidth: 3 }] };
+  const data = { labels, datasets: [{ data: values, backgroundColor: colors || Object.values(COLORS), borderColor: '#090E1D', borderWidth: 3 }] };
   const options = { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { position: 'right' } } };
   return <div style={{ height }}><Doughnut data={data} options={options} /></div>;
 }

@@ -10,6 +10,9 @@ export const getMatches = (filters = {}) => get('/matches', { query: { limit: 10
 export const getMatchPage = (filters = {}) => get('/matches', { query: filters });
 export const getMatch = (id) => get(`/matches/${id}`).then((d) => d.match);
 
+/** → { available: false } or { available: true, competition, rows, attribution } */
+export const getStandings = (matchId) => get(`/matches/${matchId}/standings`);
+
 /** → { locked: true, price, available } or { locked: false, unlockReason, prediction } */
 export const getPrediction = (matchId) => get(`/matches/${matchId}/prediction`);
 export const getPredictions = () => get('/predictions', { query: { limit: 100 } }).then((d) => d.items);

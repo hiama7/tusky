@@ -20,7 +20,7 @@ export default function Purchases() {
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <StatCard icon={ShoppingBag} label="Unlocked predictions" value={loading ? '…' : list.length} />
         <StatCard icon={IndianRupee} color="green" label="Total spent" value={loading ? '…' : inr(spent)} />
-        <StatCard icon={Gift} color="purple" label="Free trial unlocks" value={loading ? '…' : list.filter((p) => p.via === 'trial').length} />
+        <StatCard icon={Gift} color="accent" label="Free trial unlocks" value={loading ? '…' : list.filter((p) => p.via === 'trial').length} />
       </div>
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2"><CardSkeleton count={4} className="h-36" /></div>
