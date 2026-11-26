@@ -112,3 +112,14 @@ export function snapshotOf(p, match) {
     snapshotAt: new Date().toISOString(),
   };
 }
+
+/** Publishes inside a transaction: bumps the version and stores an immutable snapshot. */
+export async function publishInTx(db, predictionId, adminId) {
+  const p = await db.prediction.findUnique({ where: { id: predictionId }, include: { match: true } });
+  validateProbabilities(p); // re-check stored values before going live
+  const version = p.version + 1;
+  const now = new Date();
+  const updated = await db.prediction.update({ where: { id: p.id }, data: { publicationStatus: 'PUBLISHED', version, publishedAt: now } });
+  await db.predictionVersion.create({ data: { predictionId: p.id, version, snapshot: snapshotOf(updated, p.match), publishedById: adminId, publishedAt: now } });
+  return updated;
+}

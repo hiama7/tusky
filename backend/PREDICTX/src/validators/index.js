@@ -217,6 +217,7 @@ export const planBody = z.object({
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 });
 
+export const mlSyncBody = z.object({ publish: z.boolean().default(false), days: z.coerce.number().int().min(1).max(60).optional() });
 export const userStatus = z.object({ status: z.enum(['ACTIVE', 'BLOCKED']) });
 export const refundBody = z.object({ amount: money.optional(), reason: trimmed(255).min(3, 'Give a short reason') });
 export const analyticsQuery = z.object({ range: z.enum(['today', '7d', '30d', '90d', '12w', '12m', '5y']).default('30d') });

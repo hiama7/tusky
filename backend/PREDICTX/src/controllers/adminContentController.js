@@ -5,7 +5,7 @@ import { ApiError, created, ok, paginate } from '../utils/apiResponse.js';
 import { money } from '../utils/money.js';
 import { removeUpload } from '../middleware/uploadMiddleware.js';
 import { adminLog } from '../services/notificationService.js';
-import { snapshotOf, validateProbabilities } from '../services/predictionService.js';
+import { publishInTx, validateProbabilities } from '../services/predictionService.js';
 import { uniqueNewsSlug } from '../services/sportsDataService.js';
 import { shortCode, slugify } from '../services/slug.js';
 import { buildMatchWhere } from './matchController.js';
@@ -258,17 +258,6 @@ function predictionData(b, match) {
     source: b.source,
     modelVersion: b.source === 'MODEL' ? b.modelVersion ?? null : null,
   };
-}
-
-/** Publishes inside a transaction: bumps the version and stores an immutable snapshot. */
-async function publishInTx(db, predictionId, adminId) {
-  const p = await db.prediction.findUnique({ where: { id: predictionId }, include: { match: true } });
-  validateProbabilities(p); // re-check stored values before going live
-  const version = p.version + 1;
-  const now = new Date();
-  const updated = await db.prediction.update({ where: { id: p.id }, data: { publicationStatus: 'PUBLISHED', version, publishedAt: now } });
-  await db.predictionVersion.create({ data: { predictionId: p.id, version, snapshot: snapshotOf(updated, p.match), publishedById: adminId, publishedAt: now } });
-  return updated;
 }
 
 export async function createPrediction(req, res) {
