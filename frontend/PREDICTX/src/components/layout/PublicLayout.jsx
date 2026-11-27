@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Mail, MapPin, LayoutDashboard } from 'lucide-react';
 import { Logo } from '../ui';
+import { SITE } from '../../content/site';
+import { POLICY_LINKS } from '../../content/policies';
 import { PointerGlow, ScrollProgress } from '../ui/effects';
 import { useAuth } from '../../context/AuthContext';
 import { cx } from '../../utils/format';
@@ -87,11 +89,13 @@ function Footer() {
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-2 md:px-6 lg:grid-cols-5">
         <div className="lg:col-span-2">
           <Logo />
-          <p className="mt-4 max-w-sm text-sm text-muted">AI-powered sports analytics, match predictions and in-depth performance insights — built for fans who like to think ahead.</p>
-          <ul className="mt-5 space-y-2 text-sm text-muted">
-            <li className="flex items-center gap-2"><Mail className="h-4 w-4" /> support@tusky.app</li>
-                        <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Bengaluru, India</li>
-          </ul>
+          <p className="mt-4 max-w-sm text-sm text-muted">Match win probabilities from models trained on past results, with recent form and head-to-head records.</p>
+          {(SITE.email || SITE.address) && (
+            <ul className="mt-5 space-y-2 text-sm text-muted">
+              {SITE.email && <li className="flex items-center gap-2"><Mail className="h-4 w-4" /> {SITE.email}</li>}
+              {SITE.address && <li className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {SITE.address}</li>}
+            </ul>
+          )}
         </div>
         {cols.map((c) => (
           <div key={c.title}>
@@ -108,8 +112,12 @@ function Footer() {
           <Link to={user ? '/user/free-trial' : '/register'} className="btn-primary">{user ? 'Use my free trial' : 'Create free account'}</Link>
         </div>
       </div>
-      <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-8 text-xs text-muted md:flex-row md:justify-between md:px-6">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-8 text-xs text-muted md:flex-row md:flex-wrap md:justify-between md:px-6">
         <p>© {new Date().getFullYear()} TUSKY. Predictions are probabilistic analysis for entertainment & research only.</p>
+        <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legal">
+          {POLICY_LINKS.map(([label, to]) => <Link key={to} to={to} className="hover:text-white">{label}</Link>)}
+        </nav>
+        <p className="w-full">Football data provided by the Football-Data.org API.</p>
       </div>
     </footer>
   );
