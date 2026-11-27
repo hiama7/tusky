@@ -95,7 +95,7 @@ function Hero({ next, total, competitions }) {
 
       <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 md:px-6 lg:grid-cols-2">
         <div className="page-enter">
-          <span className="badge-glow ring-gradient !px-3 !py-1"><Sparkles className="h-3 w-3" /> AI-powered sports analytics</span>
+          <span className="badge-glow ring-gradient !px-3 !py-1"><Sparkles className="h-3 w-3" /> Sports analytics from past results</span>
           <h1 className="mt-5 text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl">
             <span className="text-gradient">Predict Smarter.</span><br />Analyze Better.<br />Stay Ahead.
           </h1>

@@ -14,6 +14,7 @@ import Login from './pages/public/Login';
 import Register from './pages/public/Register';
 import ResetPassword from './pages/public/ResetPassword';
 import NotFound from './pages/public/NotFound';
+import Policy from './pages/public/Policy';
 
 import Dashboard from './pages/user/Dashboard';
 import UserSports from './pages/user/UserSports';
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="sports" element={<Sports />} />
         <Route path="news" element={<News />} />
         <Route path="pricing" element={<Pricing />} />
+        {['terms', 'privacy', 'refunds', 'disclaimer'].map((name) => <Route key={name} path={name} element={<Policy key={name} name={name} />} />)}
         <Route path="*" element={<NotFound />} />
       </Route>
       <Route path="login" element={<Login />} />

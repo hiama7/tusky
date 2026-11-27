@@ -6,23 +6,23 @@
 // =============================================================================
 
 export const SPORTS = [
-  { slug: 'cricket', name: 'Cricket', color: '#20D9A0', image: 'assets/images/sports/cricket.svg', outcomeFormat: 'TWO_WAY', description: 'T20, ODI & Test analytics' },
-  { slug: 'football', name: 'Football', color: '#386BFF', image: 'assets/images/sports/football.svg', outcomeFormat: 'THREE_WAY', description: 'League & cup match models' },
-  { slug: 'basketball', name: 'Basketball', color: '#FFB547', image: 'assets/images/sports/basketball.svg', outcomeFormat: 'TWO_WAY', description: 'Pace & efficiency ratings' },
-  { slug: 'tennis', name: 'Tennis', color: '#C6F432', image: 'assets/images/sports/tennis.svg', outcomeFormat: 'TWO_WAY', description: 'Surface-aware player form' },
-  { slug: 'badminton', name: 'Badminton', color: '#8657FF', image: 'assets/images/sports/badminton.svg', outcomeFormat: 'TWO_WAY', description: 'Rally length & serve stats' },
-  { slug: 'hockey', name: 'Hockey', color: '#38BDF8', image: 'assets/images/sports/hockey.svg', outcomeFormat: 'THREE_WAY', description: 'Circle entries & conversions' },
-  { slug: 'volleyball', name: 'Volleyball', color: '#FF5263', image: 'assets/images/sports/volleyball.svg', outcomeFormat: 'TWO_WAY', description: 'Set-by-set momentum' },
-  { slug: 'esports', name: 'Esports', color: '#E879F9', image: 'assets/images/sports/esports.svg', outcomeFormat: 'TWO_WAY', description: 'Map pools & draft stats' },
+  { slug: 'cricket', name: 'Cricket', color: '#20D9A0', image: 'assets/images/sports/cricket.svg', outcomeFormat: 'TWO_WAY', description: 'T20, ODI and Test fixtures' },
+  { slug: 'football', name: 'Football', color: '#386BFF', image: 'assets/images/sports/football.svg', outcomeFormat: 'THREE_WAY', description: 'League match probabilities' },
+  { slug: 'basketball', name: 'Basketball', color: '#FFB547', image: 'assets/images/sports/basketball.svg', outcomeFormat: 'TWO_WAY', description: 'Game predictions when listed' },
+  { slug: 'tennis', name: 'Tennis', color: '#C6F432', image: 'assets/images/sports/tennis.svg', outcomeFormat: 'TWO_WAY', description: 'Match predictions when listed' },
+  { slug: 'badminton', name: 'Badminton', color: '#8657FF', image: 'assets/images/sports/badminton.svg', outcomeFormat: 'TWO_WAY', description: 'Match predictions when listed' },
+  { slug: 'hockey', name: 'Hockey', color: '#38BDF8', image: 'assets/images/sports/hockey.svg', outcomeFormat: 'THREE_WAY', description: 'Match predictions when listed' },
+  { slug: 'volleyball', name: 'Volleyball', color: '#FF5263', image: 'assets/images/sports/volleyball.svg', outcomeFormat: 'TWO_WAY', description: 'Match predictions when listed' },
+  { slug: 'esports', name: 'Esports', color: '#E879F9', image: 'assets/images/sports/esports.svg', outcomeFormat: 'TWO_WAY', description: 'Match predictions when listed' },
 ];
 
 export const PLANS = [
   { code: 'basic-weekly', planName: 'Basic Weekly', price: '199.00', durationDays: 7, allSports: false, sports: ['cricket', 'football'], popular: false, sortOrder: 1,
-    description: 'Cricket and football predictions for 7 days.', features: ['Cricket & football predictions for 7 days', 'Match insights & player stats', 'Email alerts'] },
+    description: 'Cricket and football, for 7 days.', features: ['Listed cricket and football matches for 7 days', 'Win probabilities, form and head-to-head'] },
   { code: 'premium-monthly', planName: 'Premium Monthly', price: '599.00', durationDays: 30, allSports: true, sports: [], popular: true, sortOrder: 2,
-    description: 'Every sport, every prediction, for 30 days.', features: ['All sports for 30 days', 'Full head-to-head history', 'Priority notifications', 'Early access to new sports'] },
+    description: 'Every listed match, for 30 days.', features: ['Every listed sport for 30 days', 'Win probabilities, form and head-to-head'] },
   { code: 'pro-yearly', planName: 'Pro Yearly', price: '4999.00', durationDays: 365, allSports: true, sports: [], popular: false, sortOrder: 3,
-    description: 'Everything in Premium for a full year.', features: ['Everything in Premium', 'About 2 months free vs monthly', 'Advanced analytics dashboard', 'Dedicated support'] },
+    description: 'Everything in Premium for a full year.', features: ['Everything in Premium for 365 days', 'Costs less than paying monthly'] },
 ];
 
 const t = (name, short, color) => ({ name, short, color });

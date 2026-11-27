@@ -31,6 +31,7 @@ export default function PricingPlans({ onChoose, activePlanId }) {
   const all = bySport.flatMap(([, r]) => [r.min, r.max]);
 
   return (
+    <>
     <div className="grid gap-5 lg:grid-cols-4">
       <div className="card card-lift flex flex-col">
         <div className="stat-icon bg-orange/15 text-orange"><Lock className="h-5 w-5" /></div>
@@ -50,7 +51,7 @@ export default function PricingPlans({ onChoose, activePlanId }) {
 
       {loading ? <CardSkeleton count={3} className="h-96" /> : (plans || []).map((p) => (
         <div key={p.id} className={cx('card card-lift relative flex flex-col', p.popular && 'ring-gradient border-accent/40 shadow-[0_24px_70px_-25px_rgba(255,255,255,.85)]')}>
-          {p.popular && <span className="badge absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-solid to-deep text-ink"><Sparkles className="h-3 w-3" /> Most popular</span>}
+          {p.popular && <span className="badge absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-solid to-deep text-ink"><Sparkles className="h-3 w-3" /> Recommended</span>}
           <h3 className="text-lg font-semibold">{p.name}</h3>
           <p className="text-sm text-muted">{p.description || (p.allSports ? 'Every sport while active.' : 'Selected sports while active.')}</p>
           <p className="mt-4 font-display text-3xl font-bold">{inr(p.price)}<span className="text-base font-medium text-muted">/{p.period}</span></p>
@@ -66,5 +67,9 @@ export default function PricingPlans({ onChoose, activePlanId }) {
         </div>
       ))}
     </div>
+    {bySport.length > 0 && (
+      <p className="mt-4 text-center text-xs text-muted">Sports with matches listed now: {bySport.map(([sport]) => sport).join(', ')}. A plan can only unlock listed matches.</p>
+    )}
+    </>
   );
 }

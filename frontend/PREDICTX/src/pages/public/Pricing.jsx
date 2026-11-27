@@ -15,7 +15,7 @@ export default function Pricing() {
       <div className="text-center">
         <p className="eyebrow">Pricing</p>
         <h1 className="section-title mt-2">Pay per match or go unlimited</h1>
-        <p className="section-sub mx-auto">Transparent pricing in Indian Rupees. Cancel anytime.</p>
+        <p className="section-sub mx-auto">Prices in Indian Rupees. One-time payments, with no automatic renewal.</p>
       </div>
       <div className="mt-10"><PricingPlans /></div>
 
