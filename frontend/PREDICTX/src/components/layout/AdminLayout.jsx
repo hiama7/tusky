@@ -1,6 +1,6 @@
 // Admin area layout — completely separate session from the user area.
 import { Navigate, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, CalendarRange, Target, Newspaper, Crown, ReceiptText, BarChart3, Settings, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarRange, Target, Newspaper, Crown, ReceiptText, BarChart3, Settings, ExternalLink, Cpu } from 'lucide-react';
 import DashboardShell from './DashboardShell';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -11,6 +11,7 @@ const NAV = [
   { to: '/admin/matches', label: 'Matches', icon: CalendarRange },
   { to: '/admin/predictions', label: 'Predictions', icon: Target },
   { to: '/admin/news', label: 'Sports News', icon: Newspaper },
+  { to: '/admin/model', label: 'Models', icon: Cpu },
   { to: '/admin/subscriptions', label: 'Subscriptions', icon: Crown },
   { to: '/admin/transactions', label: 'Transactions', icon: ReceiptText },
   { to: '/admin/analytics', label: 'Revenue Analytics', icon: BarChart3 },

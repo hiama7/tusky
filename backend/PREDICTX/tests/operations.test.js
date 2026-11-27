@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { env } from '../src/config/env.js';
 import { assess } from '../src/services/healthService.js';
 import { resetAlertHistory, sendAlert } from '../src/utils/alert.js';
+import { modelReports } from '../src/services/modelReportService.js';
 import { season, steps } from '../../../ops/jobs.mjs';
 import { api, auth, loginAs, makeUser } from './helpers.js';
 
@@ -43,6 +44,17 @@ describe('health judgement', () => {
     const res = await api().get('/api/admin/system-health').set(auth(admin.token));
     expect(res.status).toBe(200);
     expect(res.body.data.checks.map((c) => c.name)).toEqual(expect.arrayContaining(['fixtures', 'results', 'jobs', 'backup']));
+  });
+});
+
+describe('model report', () => {
+  it('is admin-only and reports nothing rather than failing when files are missing', async () => {
+    expect((await api().get('/api/admin/model-report')).status).toBe(401);
+    expect(modelReports(new URL('file:///no/such/folder/'))).toEqual({ football: null, cricket: [], weakness: null });
+    const admin = await loginAs(await makeUser({ role: 'ADMIN' }), 'admin');
+    const res = await api().get('/api/admin/model-report').set(auth(admin.token));
+    expect(res.status).toBe(200);
+    expect(res.body.data.trackRecord).toHaveProperty('matches');
   });
 });
 

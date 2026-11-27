@@ -226,6 +226,30 @@ def print_tuning(res: dict) -> None:
     print(f"  decision: tuned settings {'ADOPTED' if res['adopted'] else 'NOT adopted (did not beat the defaults on the holdout)'}")
 
 
+def cmd_weakness(args, settings) -> int:
+    from . import pipeline, tune, weakness
+
+    tune.apply_saved(settings.artifacts_dir, "football")  # analyse the settings production uses
+    live = pipeline.load(settings.artifacts_dir, "football")
+    with db.connect(settings.database_url) as conn:
+        matches = db.load_matches(conn, "football")
+        names = {int(i): n for i, n in conn.execute("select id, name from competitions").fetchall()}
+    report = weakness.analyse(matches, names, kind=live.kind if live else "glm")
+    print(f"football {report['model_kind']} model, fitted before {report['cutoff']}, scored on {report['matches']} later matches (to {report['to']})")
+    print(f"  {'segment':<46}{'n':>6}{'acc':>8}{'home':>8}{'skill':>8}   95% interval")
+    for name, seg in report["segments"].items():
+        lo, hi = seg["skill_ci95"]
+        print(f"  {name:<46}{seg['matches']:>6}{seg['accuracy']:>8.1%}{seg['home_baseline']:>8.1%}{seg['skill']:>8.1%}   {lo:.1%} to {hi:.1%}")
+    d = report["draws"]
+    print(f"  draws: happened {d['observed_rate']:.1%}, predicted {d['mean_predicted']:.1%}, top pick {d['times_top_pick']} times")
+    fix = report["calibration_fix"]
+    print(f"  calibration fix: exponent {fix['exponent']}, log-loss gain {fix['log_loss_gain']} {fix['log_loss_gain_ci95']}, "
+          f"RPS gain {fix['rps_gain']} {fix['rps_gain_ci95']}; "
+          f"{fix['relative_log_loss_gain']:.2%} better log-loss, interval {'wholly above zero' if fix['interval_above_zero'] else 'wholly below zero (worse)' if fix['log_loss_gain_ci95'][1] < 0 else 'includes zero'} (not applied)")
+    print(f"  written to {weakness.write(report, settings.artifacts_dir)}")
+    return 0
+
+
 def cmd_tune(args, settings) -> int:
     from dataclasses import asdict
 
@@ -614,6 +638,8 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--groups", default="recent", help="with --calibrated: feature groups to add (comma separated)")
     sp.add_argument("--weather", action="store_true", help="cricket: include the weather group (run `weather` first)")
 
+    sub.add_parser("weakness", help="where the football model is weak, and a test of a calibration fix")
+
     sp = sub.add_parser("audit", help="measured audit: data quality, leakage probes, overfitting, calibration, staleness")
     sp.add_argument("--quick", action="store_true", help="fewer probes (faster)")
 
@@ -659,6 +685,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_rollback(args, load_settings())
     if args.cmd == "compare":
         return cmd_compare(args, load_settings())
+    if args.cmd == "weakness":
+        return cmd_weakness(args, load_settings())
     if args.cmd == "audit":
         return cmd_audit(args, load_settings())
     if args.cmd == "thesportsdb":

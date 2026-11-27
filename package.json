@@ -32,6 +32,7 @@
     "ml:train": "node ml-service/run.mjs train",
     "ml:predict": "node ml-service/run.mjs predict",
     "ml:evaluate": "node ml-service/run.mjs evaluate",
+    "ml:weakness": "node ml-service/run.mjs weakness",
     "ml:audit": "node ml-service/run.mjs audit",
     "ml:ablate": "node ml-service/run.mjs ablate",
     "ml:retrain": "node ml-service/run.mjs retrain",

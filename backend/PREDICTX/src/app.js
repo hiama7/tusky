@@ -18,6 +18,7 @@ import predictionRoutes from './routes/predictionRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import newsRoutes from './routes/newsRoutes.js';
+import { trackRecord } from './services/trackRecordService.js';
 import userRoutes, { trialRoutes } from './routes/userRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
@@ -72,6 +73,10 @@ export function createApp() {
   app.use('/api/payments', paymentRoutes);
   app.use('/api/subscriptions', subscriptionRoutes);
   app.use('/api/news', newsRoutes);
+  app.get('/api/track-record', async (req, res) => {
+    const sport = /^[a-z0-9-]{1,40}$/i.test(req.query.sport || '') ? String(req.query.sport) : undefined;
+    ok(res, await trackRecord({ sport }));
+  });
   app.use('/api/users', userRoutes);
   app.use('/api/trial', trialRoutes);
   app.use('/api/notifications', notificationRoutes);
