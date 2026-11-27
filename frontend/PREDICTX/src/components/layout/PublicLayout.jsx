@@ -14,6 +14,7 @@ const NAV = [
   { to: '/sports', label: 'Sports' },
   { to: '/news', label: 'News' },
   { to: '/user/predictions', label: 'Predictions' },
+  { to: '/track-record', label: 'Track record' },
   { to: '/pricing', label: 'Pricing' },
   { to: '/about', label: 'About' },
 ];

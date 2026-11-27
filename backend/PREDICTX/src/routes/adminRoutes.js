@@ -18,6 +18,7 @@ r.get('/analytics/revenue', validate({ query: v.analyticsQuery }), a.revenue);
 r.get('/analytics/overview', a.analyticsOverview);
 r.get('/logs', a.adminLogs);
 r.get('/system-health', a.health);
+r.get('/model-report', a.modelReport);
 
 // users
 r.get('/users', list, a.listUsers);

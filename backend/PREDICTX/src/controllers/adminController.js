@@ -8,6 +8,8 @@ import * as payments from '../services/paymentService.js';
 import * as subs from '../services/subscriptionService.js';
 import * as integrations from '../services/sportsDataService.js';
 import { systemHealth } from '../services/healthService.js';
+import { modelReports } from '../services/modelReportService.js';
+import { trackRecord } from '../services/trackRecordService.js';
 import { syncMlPredictions } from '../services/mlSyncService.js';
 import { env } from '../config/env.js';
 import { revokeAllSessions } from '../services/authService.js';
@@ -210,6 +212,10 @@ export async function updatePlan(req, res) {
 
 export async function health(_req, res) {
   ok(res, await systemHealth());
+}
+
+export async function modelReport(_req, res) {
+  ok(res, { ...modelReports(), trackRecord: (await trackRecord({ limit: 0 })).summary });
 }
 
 export async function adminLogs(req, res) {

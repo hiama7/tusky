@@ -2,6 +2,7 @@
 // returned by the server when the logged-in user is entitled to it.
 import { get } from './api';
 
+export const getTrackRecord = () => get('/track-record');
 export const getSports = () => get('/sports').then((d) => d.sports);
 export const getTournaments = (sport) => get('/tournaments', { query: { sport } }).then((d) => d.tournaments);
 
