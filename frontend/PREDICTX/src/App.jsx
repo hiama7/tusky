@@ -8,28 +8,29 @@ import AdminLayout from './components/layout/AdminLayout';
 
 import Home from './pages/public/Home';
 import Sports from './pages/public/Sports';
-import News from './pages/public/News';
 import Pricing from './pages/public/Pricing';
 import Login from './pages/public/Login';
 import Register from './pages/public/Register';
-import ResetPassword from './pages/public/ResetPassword';
 import NotFound from './pages/public/NotFound';
-import Policy from './pages/public/Policy';
-import TrackRecord from './pages/public/TrackRecord';
 
-import Dashboard from './pages/user/Dashboard';
-import UserSports from './pages/user/UserSports';
-import Matches from './pages/user/Matches';
-import Predictions from './pages/user/Predictions';
-import MatchDetails from './pages/user/MatchDetails';
-import Purchases from './pages/user/Purchases';
-import Subscription from './pages/user/Subscription';
-import FreeTrial from './pages/user/FreeTrial';
-import Wallet from './pages/user/Wallet';
-import Transactions from './pages/user/Transactions';
-import Profile from './pages/user/Profile';
-import UserNews from './pages/user/UserNews';
 
+const News = lazy(() => import('./pages/public/News'));
+const ResetPassword = lazy(() => import('./pages/public/ResetPassword'));
+const Policy = lazy(() => import('./pages/public/Policy'));
+const TrackRecord = lazy(() => import('./pages/public/TrackRecord'));
+const Dashboard = lazy(() => import('./pages/user/Dashboard'));
+const UserSports = lazy(() => import('./pages/user/UserSports'));
+const Matches = lazy(() => import('./pages/user/Matches'));
+const Predictions = lazy(() => import('./pages/user/Predictions'));
+const MatchDetails = lazy(() => import('./pages/user/MatchDetails'));
+const Purchases = lazy(() => import('./pages/user/Purchases'));
+const Subscription = lazy(() => import('./pages/user/Subscription'));
+const FreeTrial = lazy(() => import('./pages/user/FreeTrial'));
+const Wallet = lazy(() => import('./pages/user/Wallet'));
+const Transactions = lazy(() => import('./pages/user/Transactions'));
+const Profile = lazy(() => import('./pages/user/Profile'));
+const UserNews = lazy(() => import('./pages/user/UserNews'));
+const Results = lazy(() => import('./pages/user/Results'));
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="sports" element={<UserSports />} />
         <Route path="matches" element={<Matches />} />
         <Route path="predictions" element={<Predictions />} />
+        <Route path="results" element={<Results />} />
         <Route path="match/:id" element={<MatchDetails />} />
         <Route path="match-details" element={<Navigate to="/user/matches" replace />} />
         <Route path="news" element={<UserNews />} />

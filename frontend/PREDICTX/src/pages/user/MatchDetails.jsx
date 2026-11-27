@@ -172,14 +172,15 @@ export default function MatchDetails() {
             {match.isDemo && <DemoTag>Sample fixture</DemoTag>}
             {unlocked && <span className="badge-green"><Unlock className="h-3 w-3" /> {reasonLabel}</span>}
           </div>
+          <h1 className="sr-only">{match.teamA.name} vs {match.teamB.name}</h1>
           <div className="mt-8 flex items-center justify-between gap-4">
             <div className="flex flex-1 flex-col items-center gap-3 text-center md:flex-row md:text-left">
               <TeamCrest team={match.teamA} size="lg" />
-              <h1 className="text-xl font-bold md:text-3xl">{match.teamA.name}</h1>
+              <p className="font-display text-xl font-bold md:text-3xl">{match.teamA.name}</p>
             </div>
             <span className="font-display text-xl font-bold text-muted md:text-2xl">VS</span>
             <div className="flex flex-1 flex-col-reverse items-center gap-3 text-center md:flex-row md:justify-end md:text-right">
-              <h1 className="text-xl font-bold md:text-3xl">{match.teamB.name}</h1>
+              <p className="font-display text-xl font-bold md:text-3xl">{match.teamB.name}</p>
               <TeamCrest team={match.teamB} size="lg" />
             </div>
           </div>

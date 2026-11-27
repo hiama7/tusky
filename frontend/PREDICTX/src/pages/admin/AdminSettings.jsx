@@ -57,13 +57,13 @@ function Catalogue() {
           <button className="btn-ghost btn-sm" onClick={() => open('tournament')}><Plus className="h-3.5 w-3.5" /> Tournament</button>
         </div>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3 [&>div]:min-w-0">
         <div><p className="mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted"><Medal className="h-3.5 w-3.5" /> Sports ({data.sports.length})</p>
-          <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">{data.sports.map((s) => <li key={s.dbId} className="flex justify-between rounded-lg bg-white/[.03] px-3 py-1.5"><span style={{ color: s.color }}>{s.name}</span><span className="text-xs text-muted">{s.outcomeFormat === 'THREE_WAY' ? '3-way' : '2-way'} · {s.matches} matches</span></li>)}</ul></div>
+          <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">{data.sports.map((s) => <li key={s.dbId} className="flex justify-between gap-3 rounded-lg bg-white/[.03] px-3 py-1.5"><span className="min-w-0 truncate" style={{ color: s.color }}>{s.name}</span><span className="text-xs text-muted">{s.outcomeFormat === 'THREE_WAY' ? '3-way' : '2-way'} · {s.matches} matches</span></li>)}</ul></div>
         <div><p className="mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted"><Users2 className="h-3.5 w-3.5" /> Teams ({data.teams.length})</p>
-          <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">{data.teams.map((t) => <li key={t.id} className="flex justify-between rounded-lg bg-white/[.03] px-3 py-1.5"><span>{t.name}</span><span className="text-xs text-muted">{t.short} · {sportName(t.sportId)}</span></li>)}</ul></div>
+          <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">{data.teams.map((t) => <li key={t.id} className="flex justify-between gap-3 rounded-lg bg-white/[.03] px-3 py-1.5"><span className="min-w-0 truncate">{t.name}</span><span className="min-w-0 truncate text-right text-xs text-muted">{t.short} · {sportName(t.sportId)}</span></li>)}</ul></div>
         <div><p className="mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted"><Trophy className="h-3.5 w-3.5" /> Tournaments ({data.tournaments.length})</p>
-          <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">{data.tournaments.map((t) => <li key={t.id} className="flex justify-between rounded-lg bg-white/[.03] px-3 py-1.5"><span>{t.name}{t.season ? ` ${t.season}` : ''}</span><span className="text-xs text-muted">{sportName(t.sportId)}</span></li>)}</ul></div>
+          <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">{data.tournaments.map((t) => <li key={t.id} className="flex justify-between gap-3 rounded-lg bg-white/[.03] px-3 py-1.5"><span className="min-w-0 truncate">{t.name}{t.season ? ` ${t.season}` : ''}</span><span className="min-w-0 truncate text-right text-xs text-muted">{sportName(t.sportId)}</span></li>)}</ul></div>
       </div>
 
       <Modal open={!!modal} onClose={() => !busy && setModal(null)} title={modal ? `Add ${modal.kind}` : ''} size="sm">

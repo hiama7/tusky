@@ -45,7 +45,7 @@ export default function Matches() {
     <>
       <PageHeader title="Upcoming Matches" subtitle="Search fixtures and unlock the predictions you want." />
       <div className="glass mb-6 space-y-4 p-4">
-        <Chips options={[{ value: 'all', label: 'All sports' }, ...(sports || []).map((s) => ({ value: s.id, label: s.name }))]} value={sport} onChange={setSport} />
+        <Chips options={[{ value: 'all', label: 'All sports' }, ...(sports || []).filter((s) => s.upcomingMatches > 0 || s.id === sport).map((s) => ({ value: s.id, label: s.name }))]} value={sport} onChange={setSport} />
         <div className="grid gap-3 md:grid-cols-[1fr_200px_170px_170px]">
           <label className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />

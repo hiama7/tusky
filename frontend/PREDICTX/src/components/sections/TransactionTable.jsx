@@ -7,7 +7,7 @@ import { fmtDateTime, inr } from '../../utils/format';
 
 export default function TransactionTable({ userId }) {
   const [type, setType] = useState('all');
-  const { data, loading } = useAsync(() => getUserTransactions(), [userId]);
+  const { data, loading, error } = useAsync(() => getUserTransactions(), [userId]);
   const rows = (data || []).filter((t) => type === 'all' || t.type === type);
   return (
     <>
@@ -15,7 +15,7 @@ export default function TransactionTable({ userId }) {
       <DataTable
         loading={loading}
         rows={rows}
-        empty="No transactions yet."
+        empty={error ? `Couldn’t load transactions: ${error.message}` : 'No transactions yet.'}
         columns={[
           { key: 'id', label: 'Transaction ID', render: (t) => <span className="font-mono text-xs">{t.id}</span> },
           { key: 'item', label: 'Description' },
