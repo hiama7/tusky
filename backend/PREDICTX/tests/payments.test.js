@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import crypto from 'node:crypto';
 import { api, auth, checkoutSignature, loginAs, makeMatch, makeSport, makeUser, prisma, uniq, webhookSignature } from './helpers.js';
 
-const fake = vi.hoisted(() => ({ orders: new Map(), payments: new Map(), refunds: [] }));
+const fake = vi.hoisted(() => ({ orders: new Map(), payments: new Map(), refunds: [], refundError: null }));
 
 vi.mock('../src/services/paymentGateway.js', async (importOriginal) => {
   const real = await importOriginal();
@@ -28,6 +28,8 @@ vi.mock('../src/services/paymentGateway.js', async (importOriginal) => {
       return p;
     },
     refundPayment: async (paymentId, amount) => {
+      await new Promise((resolve) => setTimeout(resolve, 50)); // slow enough for a second request to arrive
+      if (fake.refundError) throw fake.refundError;
       const r = { id: `rfnd_${crypto.randomBytes(6).toString('hex')}`, payment_id: paymentId, amount, status: 'processed' };
       fake.refunds.push(r);
       return r;
@@ -255,5 +257,55 @@ describe('refunds and revenue', () => {
     expect(after.refunds - before.refunds).toBe(59); // …and was refunded
     expect(after.net).toBe(before.net); // net is unchanged
     expect(await prisma.adminLog.count({ where: { action: 'REFUND_ISSUED', entityId: String(txn.id) } })).toBe(1);
+  });
+});
+
+describe('refund safety', () => {
+  async function paid(price = '59.00') {
+    const adminToken = (await loginAs(await makeUser({ role: 'ADMIN' }), 'admin')).token;
+    const m = await makeMatch({ price });
+    const { token } = await buyer();
+    const { order } = (await api().post('/api/payments/orders').set(auth(token)).send({ type: 'PREDICTION', matchId: m.id })).body.data;
+    await api().post('/api/payments/verify').set(auth(token)).send(payOrder(order));
+    const txn = await prisma.transaction.findUnique({ where: { gatewayOrderId: order.orderId } });
+    const refund = () => api().post(`/api/admin/transactions/${txn.id}/refund`).set(auth(adminToken)).send({ reason: 'Customer request' });
+    const state = async () => ({
+      txn: await prisma.transaction.findUnique({ where: { id: txn.id } }),
+      refunds: await prisma.refund.findMany({ where: { transactionId: txn.id } }),
+      locked: (await api().get(`/api/matches/${m.id}/prediction`).set(auth(token))).body.data.locked,
+    });
+    return { refund, state };
+  }
+
+  it('two refunds sent at once pay out only once', async () => {
+    const { refund, state } = await paid();
+    const sent = fake.refunds.length;
+    const results = await Promise.all([refund(), refund()]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 400]);
+    expect(fake.refunds.length - sent).toBe(1);
+    const after = await state();
+    expect(Number(after.txn.refundedAmount)).toBe(59);
+    expect(after.refunds).toHaveLength(1);
+  });
+
+  it('a refund Razorpay rejects changes nothing and can be retried', async () => {
+    const { refund, state } = await paid();
+    fake.refundError = Object.assign(new Error('rejected'), { statusCode: 400 });
+    expect((await refund()).status).toBe(400);
+    fake.refundError = null;
+    let now = await state();
+    expect([now.txn.paymentStatus, Number(now.txn.refundedAmount), now.refunds[0].refundStatus, now.locked]).toEqual(['CAPTURED', 0, 'FAILED', false]);
+    expect((await refund()).status).toBe(200);
+    now = await state();
+    expect([now.txn.paymentStatus, now.locked]).toEqual(['REFUNDED', true]);
+  });
+
+  it('an unconfirmed refund stays reserved so it cannot be sent twice', async () => {
+    const { refund, state } = await paid();
+    fake.refundError = new Error('network timeout');
+    expect((await refund()).status).toBe(503);
+    fake.refundError = null;
+    expect((await refund()).status).toBe(400);
+    expect((await state()).refunds.map((r) => r.refundStatus)).toEqual(['PENDING']);
   });
 });

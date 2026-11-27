@@ -270,3 +270,15 @@ npm run ml:sync -- --publish --days 3  # or publish the next three days
 - The confidence label says how decisive the probabilities are (three outcomes: High from 60%, Medium from 45%; two outcomes: 70% and 58%). It is not an accuracy figure.
 - The model uses past results only. Player analysis, strengths, pitch and weather are left empty.
 - Before charging for these predictions, replace or license the development-only data behind them (see `docs/reports/final-report-2026-11.md`, section 8).
+
+## Two-factor sign-in for administrators
+
+Optional, per administrator: **Admin → Settings → Two-factor sign-in**. It adds a code from an
+authenticator app (TOTP) to the password and gives eight one-use recovery codes. Turning it on
+signs out that account's other admin sessions.
+
+- `ADMIN_2FA_KEY` encrypts the stored secrets. If empty, the key is derived from
+  `JWT_ADMIN_ACCESS_SECRET`, so changing that secret then breaks existing enrolments.
+- Lost both the phone and the recovery codes: on the server run
+  `npm run admin:2fa-reset -- --email admin@yourdomain.com`.
+- It protects the admin area only. A user-area password reset does not remove it.

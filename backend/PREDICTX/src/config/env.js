@@ -18,6 +18,8 @@ const schema = z.object({
   JWT_ADMIN_ACCESS_SECRET: z.string().min(32, 'JWT_ADMIN_ACCESS_SECRET must be at least 32 characters'),
   ACCESS_TOKEN_TTL: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  // Encrypts admins' two-factor secrets. Empty = derived from JWT_ADMIN_ACCESS_SECRET.
+  ADMIN_2FA_KEY: z.string().optional().default(''),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
   RAZORPAY_KEY_ID: z.string().optional().default(''),
   RAZORPAY_KEY_SECRET: z.string().optional().default(''),

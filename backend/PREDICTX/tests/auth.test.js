@@ -1,5 +1,5 @@
 // Authentication & authorization tests.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { api, auth, loginAs, makeUser, prisma, uniq } from './helpers.js';
 import { sentMail } from '../src/services/emailService.js';
@@ -140,7 +140,8 @@ describe('profile and passwords', () => {
     const known = await api().post('/api/auth/forgot-password').send({ email: u.email });
     expect(unknown.status).toBe(200);
     expect(known.body.message).toBe(unknown.body.message);
-    const mail = sentMail.find((m) => m.to === u.email);
+    // the reply does not wait for the mail, so the test does
+    const mail = await vi.waitFor(() => { const m = sentMail.find((x) => x.to === u.email); expect(m).toBeDefined(); return m; });
     const token = decodeURIComponent(mail.text.match(/token=([^\s]+)/)[1]);
     const reset = await api().post('/api/auth/reset-password').send({ token, password: 'Resetpass9', confirmPassword: 'Resetpass9' });
     expect(reset.status).toBe(200);

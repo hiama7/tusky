@@ -13,7 +13,9 @@ import { env } from '../config/env.js';
 import { ApiError } from '../utils/apiResponse.js';
 import { randomToken, sha256, signAccessToken } from '../utils/generateToken.js';
 import { sendMail, passwordResetEmail } from './emailService.js';
+import { logger } from '../utils/logger.js';
 import { activity, notify } from './notificationService.js';
+import { checkSecondFactor } from './twoFactorService.js';
 import * as S from './serializers.js';
 
 export const COOKIE = { user: 'px_rt', admin: 'px_art' };
@@ -91,10 +93,11 @@ export async function login({ email, password }, req, res) {
   return startSession(user, 'user', req, res);
 }
 
-export async function adminLogin({ email, password }, req, res) {
+export async function adminLogin({ email, password, code }, req, res) {
   const user = await checkCredentials(email, password);
   // Same generic message as a wrong password, so the endpoint doesn't reveal which accounts are admins.
   if (user.role !== 'ADMIN') throw ApiError.unauthorized('Incorrect email or password');
+  await checkSecondFactor(user, code);
   return startSession(user, 'admin', req, res);
 }
 
@@ -140,6 +143,16 @@ export async function logout(scope, req, res) {
     if (row) await prisma.refreshToken.updateMany({ where: { familyId: row.familyId, revokedAt: null }, data: { revokedAt: new Date() } });
   }
   clearSessionCookie(res, scope);
+}
+
+/** Signs out this account's other admin sessions, keeping the one making the request. */
+export async function revokeOtherAdminSessions(userId, req) {
+  const presented = req.cookies?.[COOKIE.admin];
+  const current = presented ? await prisma.refreshToken.findUnique({ where: { tokenHash: sha256(presented) } }) : null;
+  await prisma.refreshToken.updateMany({
+    where: { userId, scope: 'admin', revokedAt: null, ...(current?.userId === userId ? { NOT: { familyId: current.familyId } } : {}) },
+    data: { revokedAt: new Date() },
+  });
 }
 
 export const revokeAllSessions = (userId, db = prisma) =>
@@ -188,7 +201,8 @@ export async function forgotPassword(email) {
   });
   const link = `${env.APP_URL}/#/reset-password?token=${encodeURIComponent(token)}`;
   const mail = passwordResetEmail(user.fullName, link);
-  await sendMail({ to: user.email, ...mail });
+  // Not awaited: a slow or broken mail server must not reveal that the account exists.
+  sendMail({ to: user.email, ...mail }).catch((err) => logger.error({ err }, 'Password reset email failed'));
 }
 
 export async function resetPassword(token, newPassword) {

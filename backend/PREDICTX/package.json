@@ -16,6 +16,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "node --env-file-if-exists=.env prisma/seed.js",
     "db:reset": "prisma migrate reset --force",
+    "admin:2fa-reset": "node --env-file-if-exists=.env scripts/admin-2fa-reset.js",
     "create-admin": "node --env-file-if-exists=.env scripts/create-admin.js",
     "demo:hide": "node --env-file-if-exists=.env scripts/demo-content.js hide",
     "demo:show": "node --env-file-if-exists=.env scripts/demo-content.js show",

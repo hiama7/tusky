@@ -31,11 +31,16 @@ export const forgotPassword = (email) => post('/auth/forgot-password', { email }
 export const resetPassword = (token, password, confirmPassword) => post('/auth/reset-password', { token, password, confirmPassword }, { scope: 'none' });
 
 // ---- admin session
-export async function adminLogin({ email, password }) {
-  const data = await post('/auth/admin/login', { email, password }, { scope: 'none' });
+export async function adminLogin({ email, password, code }) {
+  const data = await post('/auth/admin/login', { email, password, ...(code ? { code } : {}) }, { scope: 'none' });
   setToken('admin', data.accessToken);
   return data.user;
 }
+
+export const twoFactorStatus = () => get('/auth/admin/2fa', { scope: 'admin' });
+export const twoFactorSetup = (password) => post('/auth/admin/2fa/setup', { password }, { scope: 'admin' });
+export const twoFactorEnable = (code) => post('/auth/admin/2fa/enable', { code }, { scope: 'admin' });
+export const twoFactorDisable = (password, code) => post('/auth/admin/2fa/disable', { password, code }, { scope: 'admin' });
 
 export async function adminLogout() {
   try { await post('/auth/admin/logout', undefined, { scope: 'none' }); } finally { setToken('admin', null); }

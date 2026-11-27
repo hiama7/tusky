@@ -313,64 +313,103 @@ export async function walletOverview(userId) {
 
 // ----------------------------------------------------------------------------- refunds (admin)
 
+/** Locks the transaction row and returns its owner. Must be the first statement of
+ *  a DB transaction, so that later plain reads see what other writers committed. */
+async function lockTransaction(db, transactionId) {
+  const [row] = await db.$queryRaw`SELECT userId FROM transactions WHERE id = ${transactionId} FOR UPDATE`;
+  if (!row) throw ApiError.notFound('Transaction not found');
+  return Number(row.userId);
+}
+
+const statusAfter = (refunded, amount) => (refunded.lte(0) ? 'CAPTURED' : refunded.gte(amount) ? 'REFUNDED' : 'PARTIALLY_REFUNDED');
+
+/**
+ * Claims part of a captured payment for a refund, before any money moves. Two
+ * simultaneous requests are serialised here, so together they can never exceed
+ * the amount paid. Top-up credit is taken out of the wallet at the same time.
+ */
+async function reserveRefund(db, adminId, transactionId, { amount, reason }) {
+  const userId = await lockTransaction(db, transactionId);
+  await db.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`; // wallet spending waits too
+  const txn = await db.transaction.findUnique({ where: { id: transactionId } });
+  if (!['CAPTURED', 'PARTIALLY_REFUNDED'].includes(txn.paymentStatus)) throw ApiError.badRequest('Only successful payments can be refunded.');
+  const remaining = toDecimal(txn.amount).minus(txn.refundedAmount);
+  const value = amount === undefined || amount === null ? remaining : toDecimal(amount);
+  if (value.lte(0) || value.gt(remaining)) throw ApiError.validation([{ field: 'amount', message: `Refund must be between ₹0.01 and ₹${money(remaining)}` }]);
+
+  if (txn.transactionType === 'WALLET_TOPUP') {
+    const balance = await walletBalance(txn.userId, db);
+    if (balance.lt(value)) throw ApiError.conflict(`The user has already spent this credit (wallet balance ₹${money(balance)}).`);
+    await db.walletEntry.create({ data: { userId: txn.userId, entryType: 'ADJUSTMENT', amount: value.neg(), transactionId: txn.id, note: `Top-up refunded ${txn.transactionReference}` } });
+  }
+
+  const refunded = toDecimal(txn.refundedAmount).plus(value);
+  const refund = await db.refund.create({ data: { transactionId: txn.id, amount: value, reason, createdById: adminId } });
+  await db.transaction.update({ where: { id: txn.id }, data: { refundedAmount: refunded, paymentStatus: statusAfter(refunded, txn.amount) } });
+  return { txn, refund, value, full: refunded.gte(txn.amount) };
+}
+
+/** Records the refund as sent and takes back what a fully refunded payment granted. */
+async function completeRefund(db, { txn, refund, value, full }, gatewayRefund) {
+  const isWalletPayment = txn.paymentMethod === 'WALLET';
+  const processed = isWalletPayment || gatewayRefund?.status === 'processed';
+  await db.refund.update({
+    where: { id: refund.id },
+    data: { gatewayRefundId: gatewayRefund?.id ?? null, refundStatus: processed ? 'PROCESSED' : 'PENDING', processedAt: processed ? new Date() : null },
+  });
+  if (isWalletPayment) {
+    await db.walletEntry.create({ data: { userId: txn.userId, entryType: 'REFUND', amount: value, transactionId: txn.id, note: `Refund ${txn.transactionReference}` } });
+  }
+  if (full && !txn.isDuplicate) {
+    if (txn.transactionType === 'PREDICTION') {
+      await db.purchase.updateMany({ where: { transactionId: txn.id }, data: { purchaseStatus: 'REVOKED', revokedAt: new Date() } });
+    } else if (txn.transactionType === 'SUBSCRIPTION') {
+      await db.userSubscription.updateMany({ where: { transactionId: txn.id }, data: { subscriptionStatus: 'CANCELLED', cancelledAt: new Date() } });
+    }
+  }
+  await notify(txn.userId, { title: 'Refund issued', message: `₹${money(value)} for ${txn.transactionReference} has been refunded${isWalletPayment ? ' to your wallet' : ''}.`, type: 'INFO' }, db);
+}
+
+/** Gives back a reservation the gateway refused, so the payment can be refunded again. */
+async function releaseRefund(db, { txn, refund, value }) {
+  await lockTransaction(db, txn.id);
+  const claimed = await db.refund.updateMany({ where: { id: refund.id, refundStatus: 'PENDING' }, data: { refundStatus: 'FAILED', processedAt: new Date() } });
+  if (!claimed.count) return;
+  const fresh = await db.transaction.findUnique({ where: { id: txn.id } });
+  const refunded = toDecimal(fresh.refundedAmount).minus(value);
+  await db.transaction.update({ where: { id: txn.id }, data: { refundedAmount: refunded, paymentStatus: statusAfter(refunded, fresh.amount) } });
+  if (txn.transactionType === 'WALLET_TOPUP') {
+    await db.walletEntry.create({ data: { userId: txn.userId, entryType: 'ADJUSTMENT', amount: value, transactionId: txn.id, note: `Refund failed ${txn.transactionReference}` } });
+  }
+}
+
 /**
  * Refunds (all or part of) a captured transaction. Gateway payments are refunded
  * through Razorpay; wallet payments are credited back to the wallet.
  * A full refund revokes the entitlement that the payment granted.
  */
-export async function refundTransaction(adminId, transactionId, { amount, reason }) {
-  const txn = await prisma.transaction.findUnique({ where: { id: transactionId } });
-  if (!txn) throw ApiError.notFound('Transaction not found');
-  if (!['CAPTURED', 'PARTIALLY_REFUNDED'].includes(txn.paymentStatus)) throw ApiError.badRequest('Only successful payments can be refunded.');
-  const remaining = toDecimal(txn.amount).minus(txn.refundedAmount);
-  const value = amount === undefined || amount === null ? remaining : toDecimal(amount);
-  if (value.lte(0) || value.gt(remaining)) throw ApiError.validation([{ field: 'amount', message: `Refund must be between ₹0.01 and ₹${money(remaining)}` }]);
-  const isWalletPayment = txn.paymentMethod === 'WALLET';
-
-  if (txn.transactionType === 'WALLET_TOPUP') {
-    const balance = await walletBalance(txn.userId);
-    if (balance.lt(value)) throw ApiError.conflict(`The user has already spent this credit (wallet balance ₹${money(balance)}).`);
-  }
+export async function refundTransaction(adminId, transactionId, input) {
+  const reservation = await prisma.$transaction((db) => reserveRefund(db, adminId, transactionId, input));
+  const { txn, value, full } = reservation;
 
   let gatewayRefund = null;
-  if (!isWalletPayment) {
-    gatewayRefund = await gateway.refundPayment(txn.gatewayPaymentId, toPaise(value), { transaction: txn.transactionReference, reason: reason || '' });
+  if (txn.paymentMethod !== 'WALLET') {
+    try {
+      gatewayRefund = await gateway.refundPayment(txn.gatewayPaymentId, toPaise(value), { transaction: txn.transactionReference, reason: input.reason || '' });
+    } catch (err) {
+      logger.error({ err: err?.error || err, transactionId: txn.id }, 'Razorpay refund failed');
+      // A 4xx answer means no money moved. Anything else is unknown: keep the
+      // amount reserved so that a retry cannot refund it twice.
+      if (err?.statusCode >= 400 && err.statusCode < 500) {
+        await prisma.$transaction((db) => releaseRefund(db, reservation));
+        throw ApiError.badRequest('Razorpay rejected the refund. Nothing was refunded.');
+      }
+      throw ApiError.unavailable('Razorpay did not confirm the refund. Check the Razorpay dashboard before trying again.');
+    }
   }
 
-  return prisma.$transaction(async (db) => {
-    await db.$queryRaw`SELECT id FROM transactions WHERE id = ${txn.id} FOR UPDATE`;
-    const fresh = await db.transaction.findUnique({ where: { id: txn.id } });
-    const refunded = toDecimal(fresh.refundedAmount).plus(value);
-    const full = refunded.gte(fresh.amount);
-    await db.refund.create({
-      data: {
-        transactionId: txn.id,
-        gatewayRefundId: gatewayRefund?.id ?? null,
-        amount: value,
-        reason,
-        createdById: adminId,
-        refundStatus: isWalletPayment || gatewayRefund?.status === 'processed' ? 'PROCESSED' : 'PENDING',
-        processedAt: isWalletPayment || gatewayRefund?.status === 'processed' ? new Date() : null,
-      },
-    });
-    await db.transaction.update({ where: { id: txn.id }, data: { refundedAmount: refunded, paymentStatus: full ? 'REFUNDED' : 'PARTIALLY_REFUNDED' } });
-
-    if (isWalletPayment) {
-      await db.walletEntry.create({ data: { userId: txn.userId, entryType: 'REFUND', amount: value, transactionId: txn.id, note: `Refund ${txn.transactionReference}` } });
-    }
-    if (txn.transactionType === 'WALLET_TOPUP') {
-      await db.walletEntry.create({ data: { userId: txn.userId, entryType: 'ADJUSTMENT', amount: value.neg(), transactionId: txn.id, note: `Top-up refunded ${txn.transactionReference}` } });
-    }
-    if (full && !txn.isDuplicate) {
-      if (txn.transactionType === 'PREDICTION') {
-        await db.purchase.updateMany({ where: { transactionId: txn.id }, data: { purchaseStatus: 'REVOKED', revokedAt: new Date() } });
-      } else if (txn.transactionType === 'SUBSCRIPTION') {
-        await db.userSubscription.updateMany({ where: { transactionId: txn.id }, data: { subscriptionStatus: 'CANCELLED', cancelledAt: new Date() } });
-      }
-    }
-    await notify(txn.userId, { title: 'Refund issued', message: `₹${money(value)} for ${txn.transactionReference} has been refunded${isWalletPayment ? ' to your wallet' : ''}.`, type: 'INFO' }, db);
-    return { refunded: money(value), status: full ? 'Refunded' : 'Partially refunded' };
-  });
+  await prisma.$transaction((db) => completeRefund(db, reservation, gatewayRefund));
+  return { refunded: money(value), status: full ? 'Refunded' : 'Partially refunded' };
 }
 
 export { activeSubscriptions };
