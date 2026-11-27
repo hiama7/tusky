@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Plus, ShieldCheck, KeyRound, Plug, ScrollText, Trophy, Users2, Medal } from 'lucide-react';
 import { DataTable, Field, Modal, PageHeader, Skeleton, StatusBadge } from '../../components/ui';
 import PasswordInput from '../../components/ui/PasswordInput';
+import TwoFactorPanel from '../../components/admin/TwoFactorPanel';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { useAsync } from '../../hooks/useAsync';
@@ -137,6 +138,7 @@ export default function AdminSettings() {
         <Catalogue />
         <div className="grid gap-5 lg:grid-cols-3">
           <AdminPassword />
+          <TwoFactorPanel />
           <section className="card">
             <h2 className="flex items-center gap-2 font-semibold"><ShieldCheck className="h-4 w-4 text-green" /> Admin account</h2>
             <p className="mt-3 text-sm">{admin?.name}</p>

@@ -34,6 +34,10 @@ export const auth = {
     })
     .refine((d) => d.password === d.confirmPassword, { path: ['confirmPassword'], message: 'Passwords do not match' }),
   login: z.object({ email, password: z.string().min(1, 'Password is required').max(200) }),
+  adminLogin: z.object({ email, password: z.string().min(1, 'Password is required').max(200), code: trimmed(20).optional() }),
+  twoFactorSetup: z.object({ password: z.string().min(1, 'Enter your password').max(200) }),
+  twoFactorEnable: z.object({ code: trimmed(20).min(6, 'Enter the 6-digit code') }),
+  twoFactorDisable: z.object({ password: z.string().min(1, 'Enter your password').max(200), code: trimmed(20).min(6, 'Enter a code') }),
   forgot: z.object({ email }),
   reset: z
     .object({ token: z.string().min(20).max(200), password, confirmPassword: z.string() })

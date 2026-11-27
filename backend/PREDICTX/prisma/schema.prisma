@@ -139,6 +139,11 @@ model User {
   role            Role          @default(USER)
   accountStatus   AccountStatus @default(ACTIVE)
   emailVerifiedAt DateTime?
+  // administrators' second factor (src/services/twoFactorService.js)
+  totpSecret      String?       @db.VarChar(255) // encrypted
+  totpEnabledAt   DateTime?
+  totpLastStep    Int? // newest code accepted, so none is used twice
+  totpRecovery    Json? // hashes of unused recovery codes
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

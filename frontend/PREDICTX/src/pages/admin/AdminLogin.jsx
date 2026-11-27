@@ -17,6 +17,8 @@ export default function AdminLogin() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
+  const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState('');
 
   if (ready && admin && !busy) return <Navigate to="/admin/dashboard" replace />;
 
@@ -27,11 +29,16 @@ export default function AdminLogin() {
     if (Object.keys(errs).length) return;
     setBusy(true);
     try {
-      await adminLogin(form);
+      await adminLogin({ ...form, code: code.trim() });
       toast.success('Admin session started.');
       navigate('/admin/dashboard', { replace: true });
     } catch (err) {
-      setErrors({ form: err.message });
+      // the server asks for a code only once the password is right
+      if (err.fields.code) {
+        setErrors(needsCode ? { code: err.fields.code } : {});
+        setNeedsCode(true);
+        setCode('');
+      } else setErrors({ form: err.message });
       setBusy(false);
     }
   }
@@ -46,6 +53,11 @@ export default function AdminLogin() {
         <Field label="Password" error={errors.password}>
           <PasswordInput error={errors.password} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="current-password" />
         </Field>
+        {needsCode && (
+          <Field label="Authentication code" error={errors.code} hint="6 digits from your authenticator app, or a recovery code.">
+            <input className={cx('input', errors.code && 'input-error')} value={code} onChange={(e) => setCode(e.target.value)} inputMode="text" autoComplete="one-time-code" autoFocus maxLength={20} />
+          </Field>
+        )}
         <button className="btn-primary btn-lg w-full" disabled={busy}>{busy ? <><span className="spinner" /> Verifying…</> : <><ShieldCheck className="h-4 w-4" /> Sign in to Admin</>}</button>
       </form>
     </AuthLayout>

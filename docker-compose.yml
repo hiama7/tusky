@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: tusky
       POSTGRES_DB: tusky
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - tusky-pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -28,7 +28,7 @@ services:
       MYSQL_USER: predictx
       MYSQL_PASSWORD: ${PREDICTX_MYSQL_PASSWORD:-predictx}
     ports:
-      - "${PREDICTX_MYSQL_PORT:-3307}:3306"
+      - "127.0.0.1:${PREDICTX_MYSQL_PORT:-3307}:3306"
     volumes:
       - predictx-mysqldata:/var/lib/mysql
     healthcheck:
