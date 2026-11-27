@@ -4,6 +4,7 @@ import multer from 'multer';
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/apiResponse.js';
 import { logger } from '../utils/logger.js';
+import { sendAlert } from '../utils/alert.js';
 import { removeUpload } from './uploadMiddleware.js';
 
 export function notFound(req, _res, next) {
@@ -45,6 +46,8 @@ export function errorHandler(err, req, res, _next) {
   if (req.uploadedFile) removeUpload(req.uploadedFile).catch(() => {});
 
   if (status >= 500) logger.error({ err, path: req.path, method: req.method }, 'Unhandled error');
+  // unexpected failures only: a deliberate "service unavailable" is not news
+  if (status === 500) sendAlert(`Server error on ${req.method} ${req.baseUrl}${req.route?.path || ''}: ${err.name}`);
   else logger.debug({ status, message, path: req.path }, 'Request error');
 
   const body = { success: false, message, errors };

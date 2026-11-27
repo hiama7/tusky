@@ -7,6 +7,7 @@ import * as analytics from '../services/analyticsService.js';
 import * as payments from '../services/paymentService.js';
 import * as subs from '../services/subscriptionService.js';
 import * as integrations from '../services/sportsDataService.js';
+import { systemHealth } from '../services/healthService.js';
 import { syncMlPredictions } from '../services/mlSyncService.js';
 import { env } from '../config/env.js';
 import { revokeAllSessions } from '../services/authService.js';
@@ -206,6 +207,10 @@ export async function updatePlan(req, res) {
 }
 
 // ----------------------------------------------------------------------------- audit log & integrations
+
+export async function health(_req, res) {
+  ok(res, await systemHealth());
+}
 
 export async function adminLogs(req, res) {
   const { skip, take, meta } = paginate(req.query, { defaultLimit: 50 });

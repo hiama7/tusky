@@ -16,3 +16,8 @@ data/football-data/
 data/openfootball/
 data/thesportsdb/
 data/openmeteo/
+
+# operations: logs, job state and database backups (personal data)
+ops/logs/
+ops/state/
+backups/

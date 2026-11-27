@@ -19,6 +19,8 @@
     "admin:2fa-reset": "node --env-file-if-exists=.env scripts/admin-2fa-reset.js",
     "copy:fix": "node --env-file-if-exists=.env scripts/honest-copy.js fix",
     "copy:restore": "node --env-file-if-exists=.env scripts/honest-copy.js restore",
+    "news:import": "node --env-file-if-exists=.env scripts/news-import.js",
+    "health": "node --env-file-if-exists=.env scripts/health-check.js",
     "create-admin": "node --env-file-if-exists=.env scripts/create-admin.js",
     "demo:hide": "node --env-file-if-exists=.env scripts/demo-content.js hide",
     "demo:show": "node --env-file-if-exists=.env scripts/demo-content.js show",

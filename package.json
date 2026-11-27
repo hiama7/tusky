@@ -8,6 +8,9 @@
     "scrapper-service"
   ],
   "scripts": {
+    "jobs": "node ops/jobs.mjs",
+    "backup": "node ops/backup.mjs",
+    "backup:verify": "node ops/backup.mjs verify",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:generate": "npm run generate -w @tusky/db",

@@ -3,11 +3,28 @@ import { env } from './src/config/env.js';
 import { prisma } from './src/config/database.js';
 import { createApp } from './src/app.js';
 import { logger } from './src/utils/logger.js';
+import { sendAlert } from './src/utils/alert.js';
 import { syncMlPredictions } from './src/services/mlSyncService.js';
 
+/**
+ * Waits for the database instead of exiting. Exiting left the development proxy
+ * answering 502 until a file changed, even after the database had started.
+ */
+async function waitForDatabase() {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      return;
+    } catch (err) {
+      if (attempt === 1) sendAlert('The API cannot reach its database and is waiting for it.', 'db-down');
+      logger.error({ code: err.code, attempt }, 'Database not reachable; retrying in 5 seconds');
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+  }
+}
+
 async function main() {
-  await prisma.$connect();
-  await prisma.$queryRaw`SELECT 1`;
+  await waitForDatabase();
   const app = createApp();
   const server = app.listen(env.PORT, () => {
     logger.info(`PREDICTX API listening on http://localhost:${env.PORT} (${env.NODE_ENV})`);
@@ -40,6 +57,14 @@ async function main() {
   };
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+}
+
+for (const event of ['uncaughtException', 'unhandledRejection']) {
+  process.on(event, async (err) => {
+    logger.fatal({ err }, event);
+    await sendAlert(`The API stopped: ${event} (${err?.name || 'error'}).`);
+    process.exit(1);
+  });
 }
 
 main().catch((err) => {

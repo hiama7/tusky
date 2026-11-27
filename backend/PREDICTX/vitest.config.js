@@ -30,6 +30,7 @@ export default defineConfig({
       FOOTBALL_DATA_API_KEY: '', // no real calls from tests
       GNEWS_API_KEY: '',
       NEWS_PROVIDER: 'none',
+      ALERT_WEBHOOK_URL: '', // no real alerts from tests
       APP_URL: 'http://localhost:5173',
       CORS_ORIGINS: 'http://localhost:5173',
     },
