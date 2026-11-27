@@ -362,11 +362,17 @@ export async function refundTransaction(adminId, transactionId, { amount, reason
   const { txn, value, full, isWalletPayment, refundId } = reserved;
   if (isWalletPayment) return { refunded: money(value), status: full ? 'Refunded' : 'Partially refunded' };
 
-  // Phase 2 — call the gateway (idempotent per refund row via receipt note); undo the reservation if it fails.
+  // Phase 2 — call the gateway; undo the reservation only if it clearly refused the refund.
   let gatewayRefund;
   try {
     gatewayRefund = await gateway.refundPayment(txn.gatewayPaymentId, toPaise(value), { transaction: txn.transactionReference, reason: reason || '', refund_id: String(refundId) });
   } catch (err) {
+    // Only a 4xx answer proves no money moved. After a timeout or server error the refund
+    // may have gone through, so the amount stays reserved and cannot be sent a second time.
+    if (!(err?.statusCode >= 400 && err.statusCode < 500)) {
+      logger.error({ err: err?.error || err, refundId }, 'Razorpay refund unconfirmed; amount left reserved');
+      throw ApiError.unavailable(`Razorpay did not confirm the refund, so it is held as pending (refund #${refundId}). Check the Razorpay dashboard before doing anything else.`);
+    }
     await prisma.$transaction(async (db) => {
       await db.$queryRaw`SELECT id FROM transactions WHERE id = ${txn.id} FOR UPDATE`;
       const cur = await db.transaction.findUnique({ where: { id: txn.id } });
@@ -378,7 +384,7 @@ export async function refundTransaction(adminId, transactionId, { amount, reason
       }
     });
     logger.error({ err: err?.error || err, refundId }, 'Razorpay refund failed; reservation released');
-    throw ApiError.unavailable('The payment gateway could not process the refund. Nothing was changed.');
+    throw ApiError.badRequest('Razorpay rejected the refund. Nothing was changed.');
   }
 
   // Phase 3 — record the gateway result and revoke the entitlement.

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import crypto from 'node:crypto';
 import { api, auth, checkoutSignature, loginAs, makeMatch, makeSport, makeUser, prisma, uniq, webhookSignature } from './helpers.js';
 
-const fake = vi.hoisted(() => ({ orders: new Map(), payments: new Map(), refunds: [], failRefund: false }));
+const fake = vi.hoisted(() => ({ orders: new Map(), payments: new Map(), refunds: [], failRefund: null }));
 
 vi.mock('../src/services/paymentGateway.js', async (importOriginal) => {
   const real = await importOriginal();
@@ -28,7 +28,7 @@ vi.mock('../src/services/paymentGateway.js', async (importOriginal) => {
       return p;
     },
     refundPayment: async (paymentId, amount) => {
-      if (fake.failRefund) throw new Error('gateway down');
+      if (fake.failRefund) throw fake.failRefund;
       const r = { id: `rfnd_${crypto.randomBytes(6).toString('hex')}`, payment_id: paymentId, amount, status: 'processed' };
       fake.refunds.push(r);
       return r;
@@ -283,21 +283,41 @@ describe('refunds and revenue', () => {
     expect(after.paymentStatus).toBe('REFUNDED');
   });
 
-  it('a gateway failure releases the reserved amount', async () => {
+  it('a refund the gateway rejects releases the reserved amount', async () => {
     const at = await adminToken();
     const { txn, m, token } = await paidTxn();
-    fake.failRefund = true;
+    fake.failRefund = Object.assign(new Error('refund refused'), { statusCode: 400 });
     try {
       const res = await api().post(`/api/admin/transactions/${txn.id}/refund`).set(auth(at)).send({ reason: 'gateway is down' });
-      expect(res.status).toBeGreaterThanOrEqual(500);
+      expect(res.status).toBe(400);
     } finally {
-      fake.failRefund = false;
+      fake.failRefund = null;
     }
     const after = await prisma.transaction.findUnique({ where: { id: txn.id } });
     expect(Number(after.refundedAmount)).toBe(0);
     expect(after.paymentStatus).toBe('CAPTURED');
     expect((await api().get(`/api/matches/${m.id}/prediction`).set(auth(token))).body.data.locked).toBe(false); // still entitled
     expect((await api().post(`/api/admin/transactions/${txn.id}/refund`).set(auth(at)).send({ reason: 'retry works' })).status).toBe(200);
+  });
+
+  it.each([
+    ['a timeout', new Error('socket hang up')],
+    ['a gateway server error', Object.assign(new Error('bad gateway'), { statusCode: 502 })],
+  ])('after %s the amount stays reserved, so it cannot be refunded twice', async (_name, failure) => {
+    const at = await adminToken();
+    const { txn, m, token } = await paidTxn();
+    const send = (amount) => api().post(`/api/admin/transactions/${txn.id}/refund`).set(auth(at)).send({ amount, reason: 'part refund' });
+    fake.failRefund = failure;
+    try {
+      expect((await send(40)).status).toBe(503);
+    } finally {
+      fake.failRefund = null;
+    }
+    expect((await send(40)).status).toBe(422); // only 19 is left to refund
+    const after = await prisma.transaction.findUnique({ where: { id: txn.id }, include: { refunds: true } });
+    expect(Number(after.refundedAmount)).toBe(40);
+    expect(after.refunds.map((r) => r.refundStatus)).toEqual(['PENDING']);
+    expect((await api().get(`/api/matches/${m.id}/prediction`).set(auth(token))).body.data.locked).toBe(false);
   });
 
   it('refunding a wallet top-up that was already spent is rejected and the wallet never goes negative', async () => {
