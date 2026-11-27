@@ -7,7 +7,6 @@ import PasswordInput from '../../components/ui/PasswordInput';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { changePassword, updateProfile } from '../../services/auth';
-import { readPref, writePref } from '../../services/storage';
 import { isEmail, isPhone, passwordIssue } from '../../utils/validation';
 import { cx, fmtDate } from '../../utils/format';
 
@@ -68,8 +67,6 @@ function SettingsPanel({ user }) {
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
   const [pwErr, setPwErr] = useState({});
   const [busy, setBusy] = useState(false);
-  // Display preferences only (harmless to keep in the browser).
-  const [prefs, setPrefs] = useState(() => readPref(`notify_${user.id}`) || { matchReminders: true, newsDigest: false, showSampleContent: true });
 
   async function savePassword(e) {
     e.preventDefault();
@@ -92,19 +89,10 @@ function SettingsPanel({ user }) {
     }
   }
 
-  function togglePref(k) {
-    const next = { ...prefs, [k]: !prefs[k] };
-    setPrefs(next);
-    writePref(`notify_${user.id}`, next);
-    toast.info('Preference saved on this device.');
-  }
-
   async function signOut() {
     await logout();
     navigate('/login');
   }
-
-  const PREFS = [['matchReminders', 'Show match start reminders'], ['newsDigest', 'Highlight news for my favourite sports'], ['showSampleContent', 'Show “Sample” labels on demo content']];
 
   return (
     <div className="grid gap-5 lg:grid-cols-2">
@@ -117,18 +105,8 @@ function SettingsPanel({ user }) {
       </form>
       <div className="space-y-5">
         <section className="card">
-          <h2 className="mb-4 flex items-center gap-2 font-semibold"><Bell className="h-4 w-4 text-orange" /> Display preferences</h2>
-          <ul className="space-y-3">
-            {PREFS.map(([k, label]) => (
-              <li key={k} className="flex items-center justify-between gap-4 text-sm">
-                {label}
-                <button type="button" role="switch" aria-checked={prefs[k]} onClick={() => togglePref(k)} className={cx('relative h-6 w-11 shrink-0 rounded-full transition-colors', prefs[k] ? 'bg-brand' : 'bg-white/10')}>
-                  <span className={cx('absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all', prefs[k] ? 'left-[22px]' : 'left-0.5')} />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-[11px] text-muted">Stored on this device only.</p>
+          <h2 className="flex items-center gap-2 font-semibold"><Bell className="h-4 w-4 text-orange" /> Match reminders</h2>
+          <p className="mt-2 text-sm text-muted">When a match you have unlocked starts within 24 hours, you’ll see a notification the next time you open TUSKY. We don’t send email or phone alerts.</p>
         </section>
         <section className="card">
           <h2 className="flex items-center gap-2 font-semibold"><LogOut className="h-4 w-4 text-red" /> Sign out</h2>

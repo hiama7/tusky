@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Trophy, CalendarClock, Target, Newspaper, ShoppingBag, Crown, Gift,
-  Wallet, ReceiptText, UserRound, Settings, Bell,
+  Wallet, ReceiptText, UserRound, Settings, Bell, Flag,
 } from 'lucide-react';
 import DashboardShell from './DashboardShell';
 import { useClickOutside } from '../ui';
@@ -19,6 +19,7 @@ const NAV = [
   { to: '/user/sports', label: 'Sports', icon: Trophy },
   { to: '/user/matches', label: 'Upcoming Matches', icon: CalendarClock },
   { to: '/user/predictions', label: 'Predictions', icon: Target },
+  { to: '/user/results', label: 'Results', icon: Flag },
   { to: '/user/news', label: 'Sports News', icon: Newspaper },
   { to: '/user/purchases', label: 'My Purchases', icon: ShoppingBag },
   { to: '/user/subscription', label: 'Subscription', icon: Crown },

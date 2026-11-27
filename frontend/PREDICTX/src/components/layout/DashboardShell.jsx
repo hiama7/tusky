@@ -1,6 +1,6 @@
 // Shared dashboard shell for the user and admin areas:
 // collapsible sidebar (slides in on mobile) + sticky top bar + animated content.
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Menu, LogOut } from 'lucide-react';
 import { Logo } from '../ui';
@@ -47,7 +47,7 @@ export default function DashboardShell({ nav, onLogout, home, topbarRight, admin
           <p className="truncate text-sm font-medium text-muted">{admin ? 'Admin' : 'Dashboard'} <span className="text-white/30">/</span> <span className="text-white">{current}</span></p>
           <div className="ml-auto flex items-center gap-2">{topbarRight}</div>
         </header>
-        <main key={pathname} className="content page-enter"><Outlet /></main>
+        <main key={pathname} className="content page-enter"><Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center"><span className="spinner" /></div>}><Outlet /></Suspense></main>
       </div>
     </div>
   );

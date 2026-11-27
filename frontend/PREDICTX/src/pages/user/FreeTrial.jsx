@@ -29,7 +29,7 @@ export default function FreeTrial() {
   const [q, setQ] = useState('');
 
   const { data: trial, error } = useAsync(() => getTrial(), [user.id]);
-  const { data: predictions, loading } = useAsync(() => getPredictions(), [user.id]);
+  const { data: predictions, loading, error: listError } = useAsync(() => getPredictions(), [user.id]);
 
   const eligible = (predictions || [])
     .filter((p) => !p.unlocked && ['UPCOMING', 'LIVE', 'POSTPONED'].includes(p.match.status))
@@ -90,7 +90,7 @@ export default function FreeTrial() {
             <h2 className="text-xl font-semibold">1. Select one match</h2>
             <label className="relative md:w-72"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input className="input pl-9" placeholder="Search matches…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search matches" /></label>
           </div>
-          {!loading && !eligible.length ? <EmptyState title="No eligible matches right now" text="New predictions are published regularly — check back soon." /> : (
+          {!loading && !eligible.length ? <EmptyState title={listError ? "Couldn’t load matches" : "No eligible matches right now"} text={listError ? listError.message : "Matches appear here when predictions are published."} /> : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {loading ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />) : eligible.map((m) => (
                 <button key={m.id} type="button" onClick={() => setSelected(m)} className={cx('glass flex items-center gap-3 p-4 text-left transition-all', selected?.id === m.id ? 'ring-2 ring-green' : 'hover:border-white/20')} aria-pressed={selected?.id === m.id}>

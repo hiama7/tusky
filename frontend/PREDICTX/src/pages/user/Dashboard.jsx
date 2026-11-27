@@ -65,7 +65,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [sport, setSport] = useState('all');
   const { data: d, loading: dashLoading, error } = useAsync(() => getDashboard(), [user.id]);
-  const { data: matches, loading } = useAsync(() => getMatches({ upcoming: true, sport }), [sport, user.id]);
+  const { data: matches, loading, error: matchError } = useAsync(() => getMatches({ upcoming: true, sport }), [sport, user.id]);
   const { data: sports } = useAsync(() => getSports(), []);
   const { data: news } = useAsync(() => getNews({ limit: 4 }), [], { live: false });
 
@@ -109,9 +109,9 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold">Upcoming Matches</h2>
           <Link to="/user/matches" className="text-sm text-brand hover:underline">View all</Link>
         </div>
-        <div className="mb-4"><Chips options={[{ value: 'all', label: 'All' }, ...(sports || []).map((x) => ({ value: x.id, label: x.name }))]} value={sport} onChange={setSport} /></div>
+        <div className="mb-4"><Chips options={[{ value: 'all', label: 'All' }, ...(sports || []).filter((x) => x.upcomingMatches > 0).map((x) => ({ value: x.id, label: x.name }))]} value={sport} onChange={setSport} /></div>
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {loading ? <CardSkeleton count={3} className="h-72" /> : matches?.length ? matches.slice(0, 6).map((m) => <MatchCard key={m.id} match={m} />) : <div className="sm:col-span-2 xl:col-span-3"><EmptyState title="No upcoming matches for this sport" /></div>}
+          {loading ? <CardSkeleton count={3} className="h-72" /> : matchError ? <div className="sm:col-span-2 xl:col-span-3"><EmptyState title="Couldn’t load matches" text={matchError.message} /></div> : matches?.length ? matches.slice(0, 6).map((m) => <MatchCard key={m.id} match={m} />) : <div className="sm:col-span-2 xl:col-span-3"><EmptyState title="No upcoming matches for this sport" /></div>}
         </div>
       </section>
 

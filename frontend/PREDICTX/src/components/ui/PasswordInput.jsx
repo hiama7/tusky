@@ -13,3 +13,6 @@ export default function PasswordInput({ error, className = '', ...props }) {
     </div>
   );
 }
+
+// lets <Field> put its label's id on the input
+PasswordInput.isFormControl = true;

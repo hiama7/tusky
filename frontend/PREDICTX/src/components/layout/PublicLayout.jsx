@@ -1,5 +1,5 @@
 // Public site shell: sticky glass navbar (with mobile drawer) + footer.
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Mail, MapPin, LayoutDashboard } from 'lucide-react';
 import { Logo } from '../ui';
@@ -132,7 +132,7 @@ export default function PublicLayout() {
       <ScrollProgress />
       <PointerGlow />
       <Navbar />
-      <main key={pathname} className="page-enter"><Outlet /></main>
+      <main key={pathname} className="page-enter"><Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center"><span className="spinner" /></div>}><Outlet /></Suspense></main>
       <Footer />
     </div>
   );

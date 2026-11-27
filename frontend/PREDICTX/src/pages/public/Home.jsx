@@ -14,19 +14,17 @@ import { getMatchPage } from '../../services/matches';
 import { fmtDate, fmtTime, inr } from '../../utils/format';
 import { useAuth } from '../../context/AuthContext';
 
-const TICKER = [
-  ['Cricket', '#39FF14'], ['Football', '#39FF14'], ['Basketball', '#39FF14'], ['Tennis', '#39FF14'],
-  ['Hockey', '#39FF14'], ['Badminton', '#39FF14'], ['Volleyball', '#39FF14'], ['Esports', '#39FF14'],
-];
-
-/** Moving strip of sports. The list is doubled so the loop has no seam. */
-function Ticker() {
+/** Moving strip of the competitions that have matches listed. The list is repeated
+ *  so the loop has no seam. */
+function Ticker({ names }) {
+  if (!names.length) return null;
+  const loop = Array.from({ length: Math.ceil(12 / names.length) }, () => names).flat();
   return (
     <div className="marquee mb-12 border-y border-white/5 bg-white/[.02] py-3.5" aria-hidden="true">
       <div className="marquee-track">
-        {[...TICKER, ...TICKER, ...TICKER, ...TICKER].map(([name, color], i) => (
-          <span key={i} className="flex items-center gap-3 px-6 font-display text-sm font-semibold uppercase tracking-[.2em] text-white/60">
-            <span className="h-2 w-2 rotate-45" style={{ background: color, boxShadow: `0 0 12px ${color}` }} />
+        {[...loop, ...loop].map((name, i) => (
+          <span key={i} className="flex items-center gap-3 whitespace-nowrap px-6 font-display text-sm font-semibold uppercase tracking-[.2em] text-white/60">
+            <span className="h-2 w-2 rotate-45 bg-brand" />
             {name}
           </span>
         ))}
@@ -143,7 +141,7 @@ function Section({ id, eyebrow, title, sub, children, action }) {
 
 export default function Home({ scrollTo }) {
   const { user } = useAuth();
-  const { data: page, loading } = useAsync(() => getMatchPage({ upcoming: true, limit: 100 }), [user?.id]);
+  const { data: page, loading, error } = useAsync(() => getMatchPage({ upcoming: true, limit: 100 }), [user?.id]);
   const matches = page?.items || [];
   const total = page?.pagination?.total ?? matches.length;
   const picked = matches.filter((m) => m.featured);
@@ -163,7 +161,7 @@ export default function Home({ scrollTo }) {
   return (
     <>
       <Hero next={matches[0]} total={total} competitions={competitions} />
-      <Ticker />
+      <Ticker names={[...new Set(matches.map((m) => m.tournament))]} />
 
       {/* Statistics, counted from the matches listed right now */}
       {stats.length > 0 && (
@@ -186,7 +184,7 @@ export default function Home({ scrollTo }) {
 
       <Section eyebrow="Fixtures" title="Upcoming matches" sub="Every prediction is locked until you unlock it — individually, with a subscription, or with your free trial." action={<Link to="/user/matches" className="btn-ghost">View all matches <ArrowRight className="h-4 w-4" /></Link>}>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {loading ? <CardSkeleton count={6} className="h-72" /> : shown.length ? shown.map((m) => <MatchCard key={m.id} match={m} />) : <div className="sm:col-span-2 lg:col-span-3"><EmptyState title="No upcoming matches right now" text="Check back soon — new fixtures are added regularly." /></div>}
+          {loading ? <CardSkeleton count={6} className="h-72" /> : error ? <div className="sm:col-span-2 lg:col-span-3"><EmptyState title="Couldn’t load matches" text={error.message} /></div> : shown.length ? shown.map((m) => <MatchCard key={m.id} match={m} />) : <div className="sm:col-span-2 lg:col-span-3"><EmptyState title="No upcoming matches right now" text="Check back soon — new fixtures are added regularly." /></div>}
         </div>
       </Section>
 

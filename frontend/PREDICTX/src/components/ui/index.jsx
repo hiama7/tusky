@@ -1,7 +1,7 @@
 // =========================================================
 // Reusable UI building blocks used across public, user and admin pages.
 // =========================================================
-import { useEffect, useRef, useState } from 'react';
+import { Children, cloneElement, isValidElement, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { X, FlaskConical, Inbox } from 'lucide-react';
@@ -175,10 +175,15 @@ export function PageHeader({ title, subtitle, actions }) {
 
 /* ---------- Form field ---------- */
 export function Field({ label, error, children, hint, className = '' }) {
+  const generated = useId();
+  // tie the label to the control, so screen readers and clicks on the label work
+  const only = Children.count(children) === 1 && isValidElement(children) ? children : null;
+  const isControl = only && (['input', 'select', 'textarea'].includes(only.type) || only.type?.isFormControl);
+  const id = isControl ? only.props.id || generated : undefined;
   return (
     <div className={className}>
-      {label && <label className="label">{label}</label>}
-      {children}
+      {label && <label className="label" htmlFor={id}>{label}</label>}
+      {isControl ? cloneElement(only, { id, 'aria-invalid': error ? true : undefined }) : children}
       {error ? <p className="field-error">{error}</p> : hint ? <p className="mt-1 text-xs text-muted">{hint}</p> : null}
     </div>
   );

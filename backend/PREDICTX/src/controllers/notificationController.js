@@ -2,8 +2,10 @@
 import { prisma } from '../config/database.js';
 import { ApiError, ok } from '../utils/apiResponse.js';
 import * as S from '../services/serializers.js';
+import { createDueReminders } from '../services/reminderService.js';
 
 export async function list(req, res) {
+  await createDueReminders(req.user.id);
   const rows = await prisma.notification.findMany({ where: { userId: req.user.id }, orderBy: { createdAt: 'desc' }, take: 30 });
   const unread = await prisma.notification.count({ where: { userId: req.user.id, isRead: false } });
   ok(res, { items: rows.map(S.notification), unread });
