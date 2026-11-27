@@ -135,7 +135,7 @@ export const matchBody = z
     venue: trimmed(160).min(2),
     conditions: trimmed(255).optional().nullable(),
     predictionPrice: money,
-    status: z.enum(['UPCOMING', 'LIVE', 'COMPLETED', 'CANCELLED', 'POSTPONED']).default('UPCOMING'),
+    status: z.enum(['UPCOMING', 'LIVE', 'COMPLETED', 'CANCELLED', 'POSTPONED']).optional(),
     published: bool.optional(),
     featured: bool.optional(),
     removeImage: bool.optional(),

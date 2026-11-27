@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import crypto from 'node:crypto';
 import { api, auth, checkoutSignature, loginAs, makeMatch, makeSport, makeUser, prisma, uniq, webhookSignature } from './helpers.js';
 
-const fake = vi.hoisted(() => ({ orders: new Map(), payments: new Map(), refunds: [] }));
+const fake = vi.hoisted(() => ({ orders: new Map(), payments: new Map(), refunds: [], failRefund: false }));
 
 vi.mock('../src/services/paymentGateway.js', async (importOriginal) => {
   const real = await importOriginal();
@@ -28,6 +28,7 @@ vi.mock('../src/services/paymentGateway.js', async (importOriginal) => {
       return p;
     },
     refundPayment: async (paymentId, amount) => {
+      if (fake.failRefund) throw new Error('gateway down');
       const r = { id: `rfnd_${crypto.randomBytes(6).toString('hex')}`, payment_id: paymentId, amount, status: 'processed' };
       fake.refunds.push(r);
       return r;
@@ -255,5 +256,61 @@ describe('refunds and revenue', () => {
     expect(after.refunds - before.refunds).toBe(59); // …and was refunded
     expect(after.net).toBe(before.net); // net is unchanged
     expect(await prisma.adminLog.count({ where: { action: 'REFUND_ISSUED', entityId: String(txn.id) } })).toBe(1);
+  });
+
+  async function paidTxn(price = '59.00') {
+    const m = await makeMatch({ price });
+    const { u, token } = await buyer();
+    const { order } = (await api().post('/api/payments/orders').set(auth(token)).send({ type: 'PREDICTION', matchId: m.id })).body.data;
+    await api().post('/api/payments/verify').set(auth(token)).send(payOrder(order));
+    const txn = await prisma.transaction.findUnique({ where: { gatewayOrderId: order.orderId } });
+    return { m, u, token, txn };
+  }
+  async function adminToken() {
+    const admin = await makeUser({ role: 'ADMIN' });
+    return (await loginAs(admin, 'admin')).token;
+  }
+
+  it('concurrent full refunds only refund once', async () => {
+    const at = await adminToken();
+    const { txn } = await paidTxn();
+    const before = fake.refunds.filter((r) => r.payment_id === txn.gatewayPaymentId).length;
+    const results = await Promise.all([1, 2, 3].map(() => api().post(`/api/admin/transactions/${txn.id}/refund`).set(auth(at)).send({ reason: 'double click' })));
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+    expect(fake.refunds.filter((r) => r.payment_id === txn.gatewayPaymentId).length - before).toBe(1);
+    const after = await prisma.transaction.findUnique({ where: { id: txn.id } });
+    expect(Number(after.refundedAmount)).toBe(59);
+    expect(after.paymentStatus).toBe('REFUNDED');
+  });
+
+  it('a gateway failure releases the reserved amount', async () => {
+    const at = await adminToken();
+    const { txn, m, token } = await paidTxn();
+    fake.failRefund = true;
+    try {
+      const res = await api().post(`/api/admin/transactions/${txn.id}/refund`).set(auth(at)).send({ reason: 'gateway is down' });
+      expect(res.status).toBeGreaterThanOrEqual(500);
+    } finally {
+      fake.failRefund = false;
+    }
+    const after = await prisma.transaction.findUnique({ where: { id: txn.id } });
+    expect(Number(after.refundedAmount)).toBe(0);
+    expect(after.paymentStatus).toBe('CAPTURED');
+    expect((await api().get(`/api/matches/${m.id}/prediction`).set(auth(token))).body.data.locked).toBe(false); // still entitled
+    expect((await api().post(`/api/admin/transactions/${txn.id}/refund`).set(auth(at)).send({ reason: 'retry works' })).status).toBe(200);
+  });
+
+  it('refunding a wallet top-up that was already spent is rejected and the wallet never goes negative', async () => {
+    const at = await adminToken();
+    const { u, token } = await buyer();
+    const { order } = (await api().post('/api/payments/orders').set(auth(token)).send({ type: 'WALLET_TOPUP', amount: 100 })).body.data;
+    await api().post('/api/payments/verify').set(auth(token)).send(payOrder(order));
+    const m = await makeMatch({ price: '80.00' });
+    expect((await api().post('/api/payments/wallet').set(auth(token)).send({ type: 'PREDICTION', matchId: m.id })).status).toBe(200);
+    const topup = await prisma.transaction.findUnique({ where: { gatewayOrderId: order.orderId } });
+    const res = await api().post(`/api/admin/transactions/${topup.id}/refund`).set(auth(at)).send({ reason: 'spent already' });
+    expect(res.status).toBe(409);
+    const bal = await prisma.walletEntry.aggregate({ where: { userId: u.id }, _sum: { amount: true } });
+    expect(Number(bal._sum.amount)).toBe(20);
   });
 });

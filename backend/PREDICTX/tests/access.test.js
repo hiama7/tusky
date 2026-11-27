@@ -107,3 +107,31 @@ describe('input safety', () => {
     expect(nf.body.success).toBe(false);
   });
 });
+
+describe('unpublishing a prediction', () => {
+  it('buyers keep access; other viewers (incl. subscribers and drafts) see nothing', async () => {
+    const m = await makeMatch({ price: '30.00' });
+    const buyer = await makeUser();
+    const other = await makeUser();
+    const { token: buyerToken } = await loginAs(buyer);
+    const { token: otherToken } = await loginAs(other);
+    const txn = await prisma.transaction.create({ data: { transactionReference: `T-${m.id}-${buyer.id}`, userId: buyer.id, transactionType: 'PREDICTION', amount: '30.00', matchId: m.id, paymentStatus: 'CAPTURED' } });
+    await prisma.purchase.create({ data: { userId: buyer.id, matchId: m.id, transactionId: txn.id, amount: '30.00' } });
+    await prisma.prediction.update({ where: { matchId: m.id }, data: { publicationStatus: 'UNPUBLISHED', publishedAt: new Date() } });
+
+    const mine = await api().get(`/api/matches/${m.id}/prediction`).set(auth(buyerToken));
+    expect(mine.body.data.locked).toBe(false);
+    expect(mine.body.data.prediction).toBeTruthy();
+    const theirs = await api().get(`/api/matches/${m.id}/prediction`).set(auth(otherToken));
+    expect(theirs.body.data.locked).toBe(true);
+    expect(JSON.stringify(theirs.body)).not.toMatch(LEAK);
+
+    // a never-published draft is hidden even from someone holding an entitlement
+    const d = await makeMatch({ predictionStatus: 'DRAFT' });
+    const t2 = await prisma.transaction.create({ data: { transactionReference: `T-${d.id}-${buyer.id}`, userId: buyer.id, transactionType: 'PREDICTION', amount: '30.00', matchId: d.id, paymentStatus: 'CAPTURED' } });
+    await prisma.purchase.create({ data: { userId: buyer.id, matchId: d.id, transactionId: t2.id, amount: '30.00' } });
+    const draft = await api().get(`/api/matches/${d.id}/prediction`).set(auth(buyerToken));
+    expect(draft.body.data.locked).toBe(true);
+    expect(JSON.stringify(draft.body)).not.toMatch(LEAK);
+  });
+});

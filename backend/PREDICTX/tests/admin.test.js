@@ -48,6 +48,17 @@ describe('catalogue and matches', () => {
     expect(same.status).toBe(422);
   });
 
+  it('editing a match without sending a status leaves its status unchanged', async () => {
+    const s = await makeSport();
+    const created = await api().post('/api/admin/matches').set(auth(token)).send({ sportId: s.id, tournamentName: 'Status Cup', teamAName: uniq('SA'), teamBName: uniq('SB'), startsAt: new Date(Date.now() + 86_400_000).toISOString(), venue: 'Ground', predictionPrice: 20, status: 'LIVE' });
+    expect(created.status).toBe(201);
+    const id = created.body.data.match.dbId ?? created.body.data.match.id;
+    const row = await prisma.match.findUnique({ where: { id: Number(id) } });
+    const upd = await api().put(`/api/admin/matches/${row.id}`).set(auth(token)).send({ sportId: s.id, tournamentId: row.tournamentId, teamAId: row.teamAId, teamBId: row.teamBId, startsAt: row.startsAt.toISOString(), venue: 'New Ground', predictionPrice: 20 });
+    expect(upd.status).toBe(200);
+    expect((await prisma.match.findUnique({ where: { id: row.id } })).status).toBe('LIVE');
+  });
+
   it('archives instead of deleting a match with purchases', async () => {
     const m = await makeMatch();
     const u = await makeUser();
