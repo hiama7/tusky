@@ -17,6 +17,7 @@ r.get('/dashboard', a.dashboard);
 r.get('/analytics/revenue', validate({ query: v.analyticsQuery }), a.revenue);
 r.get('/analytics/overview', a.analyticsOverview);
 r.get('/logs', a.adminLogs);
+r.get('/system-health', a.health);
 
 // users
 r.get('/users', list, a.listUsers);

@@ -8,6 +8,7 @@ export const getDashboard = () => get('/admin/dashboard', A);
 export const getRevenueSeries = (range) => get('/admin/analytics/revenue', { ...A, query: { range } });
 export const getAnalyticsOverview = () => get('/admin/analytics/overview', A);
 export const getAdminLogs = () => get('/admin/logs', { ...A, query: { limit: 50 } }).then((d) => d.items);
+export const getSystemHealth = () => get('/admin/system-health', A);
 export const getIntegrations = () => get('/admin/integrations', A);
 /** Copies the ML model's upcoming predictions into the platform. publish=false imports drafts. */
 export const syncMlPredictions = (publish) => post('/admin/integrations/ml/sync', { publish }, A);

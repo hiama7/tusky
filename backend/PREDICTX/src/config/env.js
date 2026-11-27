@@ -38,6 +38,8 @@ const schema = z.object({
   // League tables (football-data.org) and headlines (gnews.io). Empty = off.
   FOOTBALL_DATA_API_KEY: z.string().optional().default(''),
   GNEWS_API_KEY: z.string().optional().default(''),
+  // Where failures are announced (a chat webhook). Empty = logged only.
+  ALERT_WEBHOOK_URL: z.string().optional().default(''),
   // The ML service's Postgres database (read-only). Empty = ML sync disabled.
   ML_DATABASE_URL: z.string().optional().default(''),
   ML_PREDICTION_PRICE: z.coerce.number().min(0).max(100000).default(49),
@@ -65,12 +67,12 @@ export const env = {
   razorpayEnabled: Boolean(parsed.data.RAZORPAY_KEY_ID && parsed.data.RAZORPAY_KEY_SECRET),
 };
 
-// The two data-API keys may instead live in the project-root .env. Only these two
-// are taken from it (it also holds the ML service's own DATABASE_URL).
+// The data-API keys and alert webhook may instead live in the project-root .env. Only
+// these are taken from it (it also holds the ML service's own DATABASE_URL).
 if (!env.isTest) {
   try {
     const root = parseEnv(readFileSync(new URL('../../../../.env', import.meta.url), 'utf8'));
-    for (const key of ['FOOTBALL_DATA_API_KEY', 'GNEWS_API_KEY']) env[key] ||= root[key] || '';
+    for (const key of ['FOOTBALL_DATA_API_KEY', 'GNEWS_API_KEY', 'ALERT_WEBHOOK_URL']) env[key] ||= root[key] || '';
   } catch {
     /* no root .env */
   }

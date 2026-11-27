@@ -1,5 +1,6 @@
 // Admin overview — real figures from MySQL (GET /api/admin/dashboard).
 // Revenue counts only captured payments; refunds are shown separately.
+import SystemHealth from '../../components/admin/SystemHealth';
 import { Link } from 'react-router-dom';
 import { Users, Crown, Target, CalendarRange, IndianRupee, TrendingUp, Plus, ArrowRight, Undo2, XCircle } from 'lucide-react';
 import { DataTable, EmptyState, PageHeader, Skeleton, StatCard, StatusBadge } from '../../components/ui';
@@ -23,6 +24,7 @@ export default function AdminDashboard() {
         <Link to="/admin/matches?new=1" className="btn-ghost"><Plus className="h-4 w-4" /> Add match</Link>
         <Link to="/admin/predictions?new=1" className="btn-primary"><Plus className="h-4 w-4" /> New prediction</Link>
       </>} />
+      <div className="mb-6"><SystemHealth /></div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {loading ? Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />) : (
