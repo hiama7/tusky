@@ -1,0 +1,16 @@
+# The site's API. The folder layout is kept, because the API reads ../../ops and
+# ../../ml-service for its health and model pages.
+FROM node:24-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+WORKDIR /app/backend/PREDICTX
+COPY backend/PREDICTX/package.json backend/PREDICTX/package-lock.json ./
+RUN npm ci
+COPY backend/PREDICTX/ ./
+RUN DATABASE_URL=mysql://build:build@localhost:3306/build npx prisma generate \
+    && mkdir -p uploads /app/ops/state /app/ml-service/artifacts \
+    && chown -R node:node uploads /app/ops /app/ml-service
+ENV NODE_ENV=production
+USER node
+EXPOSE 5000
+# apply any new database migrations, then serve
+CMD ["sh", "-c", "npx prisma migrate deploy && exec node server.js"]

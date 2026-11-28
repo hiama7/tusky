@@ -39,7 +39,7 @@ export default function AdminLayout() {
       onLogout={handleLogout}
       topbarRight={(
         <>
-          <a href="#/" target="_blank" rel="noreferrer" className="btn-ghost btn-sm"><ExternalLink className="h-3.5 w-3.5" /> View site</a>
+          <a href="/" target="_blank" rel="noreferrer" className="btn-ghost btn-sm"><ExternalLink className="h-3.5 w-3.5" /> View site</a>
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-solid to-deep text-ink text-xs font-bold" title={admin.email}>SA</span>
         </>
       )}

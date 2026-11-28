@@ -1,0 +1,15 @@
+# never send secrets, data or local builds into an image
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/.env
+**/.env.*
+!**/.env.example
+.git
+backups
+data
+ops/logs
+ops/state
+backend/PREDICTX/uploads
+ml-service/artifacts

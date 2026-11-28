@@ -1,0 +1,12 @@
+# Builds the frontend and serves it with Caddy, which also obtains HTTPS certificates.
+FROM node:24-bookworm-slim AS build
+WORKDIR /src
+COPY frontend/PREDICTX/package.json frontend/PREDICTX/package-lock.json ./
+RUN npm ci
+COPY frontend/PREDICTX/ ./
+ARG SITE_URL=""
+RUN SITE_URL="$SITE_URL" npm run build
+
+FROM caddy:2-alpine
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /src/dist /srv

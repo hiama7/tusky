@@ -639,3 +639,13 @@ model AdminLog {
   @@index([createdAt])
   @@map("admin_logs")
 }
+
+/// One count per public page per day. Nothing about the visitor.
+model PageView {
+  day   DateTime @db.Date
+  path  String   @db.VarChar(60)
+  views Int      @default(0)
+
+  @@id([day, path])
+  @@map("page_views")
+}

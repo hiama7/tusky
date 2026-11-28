@@ -16,7 +16,7 @@ const SCRATCH = 'predictx_restore_check';
 const tool = (name) => setting(`${name.toUpperCase()}_PATH`) || (existsSync(`C:/xampp/mysql/bin/${name}.exe`) ? `C:/xampp/mysql/bin/${name}.exe` : name);
 
 function mysqlTarget() {
-  const url = new URL(readEnvFile(join(BACKEND, '.env')).DATABASE_URL);
+  const url = new URL(process.env.MYSQL_BACKUP_URL || readEnvFile(join(BACKEND, '.env')).DATABASE_URL);
   return {
     db: url.pathname.slice(1),
     args: ['-h', url.hostname, '-P', url.port || '3306', '-u', decodeURIComponent(url.username), '--protocol=tcp'],
@@ -66,7 +66,9 @@ async function backup() {
     problems.push(`MySQL: ${err.message}`);
   }
   try {
-    await dumpTo(join(out, 'tusky.sql.gz'), 'docker', ['exec', setting('PG_CONTAINER', 'tusky-postgres'), 'pg_dump', '-U', 'tusky', '-d', 'tusky']);
+    const pgUrl = setting('PG_DUMP_URL');
+    if (pgUrl) await dumpTo(join(out, 'tusky.sql.gz'), 'pg_dump', [pgUrl]);
+    else await dumpTo(join(out, 'tusky.sql.gz'), 'docker', ['exec', setting('PG_CONTAINER', 'tusky-postgres'), 'pg_dump', '-U', 'tusky', '-d', 'tusky']);
     parts.postgres = true;
   } catch (err) {
     problems.push(`Postgres: ${err.message}`);

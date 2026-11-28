@@ -199,7 +199,7 @@ export async function forgotPassword(email) {
   await prisma.passwordResetToken.create({
     data: { userId: user.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + RESET_TTL_MIN * 60_000) },
   });
-  const link = `${env.APP_URL}/#/reset-password?token=${encodeURIComponent(token)}`;
+  const link = `${env.APP_URL}/reset-password?token=${encodeURIComponent(token)}`;
   const mail = passwordResetEmail(user.fullName, link);
   // Not awaited: a slow or broken mail server must not reveal that the account exists.
   sendMail({ to: user.email, ...mail }).catch((err) => logger.error({ err }, 'Password reset email failed'));

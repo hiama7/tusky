@@ -10,6 +10,7 @@ import * as integrations from '../services/sportsDataService.js';
 import { systemHealth } from '../services/healthService.js';
 import { modelReports } from '../services/modelReportService.js';
 import { trackRecord } from '../services/trackRecordService.js';
+import { viewSummary } from '../services/pageViewService.js';
 import { syncMlPredictions } from '../services/mlSyncService.js';
 import { env } from '../config/env.js';
 import { revokeAllSessions } from '../services/authService.js';
@@ -216,6 +217,10 @@ export async function health(_req, res) {
 
 export async function modelReport(_req, res) {
   ok(res, { ...modelReports(), trackRecord: (await trackRecord({ limit: 0 })).summary });
+}
+
+export async function pageViews(_req, res) {
+  ok(res, await viewSummary(30));
 }
 
 export async function adminLogs(req, res) {

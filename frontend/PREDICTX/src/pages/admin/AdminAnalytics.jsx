@@ -1,5 +1,6 @@
 // Revenue analytics (Chart.js) — all series computed in MySQL from captured
 // payments and processed refunds. Filters: Today / 7 / 30 / 90 days.
+import PageViews from '../../components/admin/PageViews';
 import { useState } from 'react';
 import { Download, IndianRupee, Target, Crown, Undo2, Percent } from 'lucide-react';
 import { Chips, EmptyState, PageHeader, Skeleton, StatCard } from '../../components/ui';
@@ -80,6 +81,7 @@ export default function AdminAnalytics() {
           ) : <Skeleton className="h-16" />}
         </ChartCard>
       </div>
+      <PageViews />
     </>
   );
 }
