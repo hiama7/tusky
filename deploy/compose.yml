@@ -1,0 +1,94 @@
+# One server running the whole site. See deploy/README.md.
+#   docker compose -f deploy/compose.yml --env-file deploy/.env.production up -d --build
+name: tusky-prod
+
+services:
+  web:
+    build: { context: .., dockerfile: deploy/Dockerfile.web, args: { SITE_URL: "${SITE_URL}" } }
+    environment: { SITE_ADDRESS: "${SITE_ADDRESS}" }
+    ports: ["${HTTP_PORT:-80}:80", "${HTTPS_PORT:-443}:443"]
+    volumes: [caddy-data:/data, caddy-config:/config]
+    depends_on: [api]
+    restart: unless-stopped
+
+  api:
+    build: { context: .., dockerfile: deploy/Dockerfile.api }
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: mysql://predictx:${MYSQL_PASSWORD}@mariadb:3306/predictx
+      ML_DATABASE_URL: postgres://tusky:${POSTGRES_PASSWORD}@postgres:5432/tusky
+      APP_URL: ${SITE_URL}
+      CORS_ORIGINS: ${SITE_URL}
+    volumes:
+      - uploads:/app/backend/PREDICTX/uploads
+      - ops-state:/app/ops/state
+      - ml-artifacts:/app/ml-service/artifacts:ro
+    depends_on:
+      mariadb: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  jobs:
+    build: { context: .., dockerfile: deploy/Dockerfile.jobs }
+    env_file: .env.production
+    environment:
+      TZ: ${TZ:-Asia/Kolkata}
+      DATABASE_URL: postgres://tusky:${POSTGRES_PASSWORD}@postgres:5432/tusky
+      ML_DATABASE_URL: postgres://tusky:${POSTGRES_PASSWORD}@postgres:5432/tusky
+      SITE_DATABASE_URL: mysql://predictx:${MYSQL_PASSWORD}@mariadb:3306/predictx
+      MYSQL_BACKUP_URL: mysql://predictx:${MYSQL_PASSWORD}@mariadb:3306/predictx
+      PG_DUMP_URL: postgres://tusky:${POSTGRES_PASSWORD}@postgres:5432/tusky
+      APP_URL: ${SITE_URL}
+      CORS_ORIGINS: ${SITE_URL}
+    volumes:
+      - uploads:/app/backend/PREDICTX/uploads
+      - ops-state:/app/ops/state
+      - ml-artifacts:/app/ml-service/artifacts
+      - ml-data:/app/data
+      - ./backups:/app/backups
+    depends_on:
+      mariadb: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MARIADB_DATABASE: predictx
+      MARIADB_USER: predictx
+      MARIADB_PASSWORD: ${MYSQL_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes: [mysql-data:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 30
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: tusky
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: tusky
+    volumes: [pg-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tusky"]
+      interval: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
+  uploads:
+  ops-state:
+  ml-artifacts:
+  ml-data:
+  mysql-data:
+  pg-data:

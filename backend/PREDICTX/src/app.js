@@ -19,6 +19,7 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import newsRoutes from './routes/newsRoutes.js';
 import { trackRecord } from './services/trackRecordService.js';
+import { countView } from './services/pageViewService.js';
 import userRoutes, { trialRoutes } from './routes/userRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
@@ -73,6 +74,10 @@ export function createApp() {
   app.use('/api/payments', paymentRoutes);
   app.use('/api/subscriptions', subscriptionRoutes);
   app.use('/api/news', newsRoutes);
+  app.post('/api/hit', async (req, res) => {
+    if (typeof req.body?.path === 'string') await countView(req.body.path);
+    res.status(204).end();
+  });
   app.get('/api/track-record', async (req, res) => {
     const sport = /^[a-z0-9-]{1,40}$/i.test(req.query.sport || '') ? String(req.query.sport) : undefined;
     ok(res, await trackRecord({ sport }));

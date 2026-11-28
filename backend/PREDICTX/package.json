@@ -21,6 +21,8 @@
     "copy:restore": "node --env-file-if-exists=.env scripts/honest-copy.js restore",
     "news:import": "node --env-file-if-exists=.env scripts/news-import.js",
     "health": "node --env-file-if-exists=.env scripts/health-check.js",
+    "email:check": "node --env-file-if-exists=.env scripts/email-check.js",
+    "payments:check": "node --env-file-if-exists=.env scripts/razorpay-check.js",
     "create-admin": "node --env-file-if-exists=.env scripts/create-admin.js",
     "demo:hide": "node --env-file-if-exists=.env scripts/demo-content.js hide",
     "demo:show": "node --env-file-if-exists=.env scripts/demo-content.js show",

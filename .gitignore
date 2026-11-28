@@ -21,3 +21,7 @@ data/openmeteo/
 ops/logs/
 ops/state/
 backups/
+
+# production settings and server backups
+deploy/.env.production
+deploy/backups/

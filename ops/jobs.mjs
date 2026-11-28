@@ -12,7 +12,10 @@ import { BACKEND, ROOT, STATE_DIR, alert, log, readEnvFile, run, setting, writeS
 
 const node = process.execPath;
 const ml = (...args) => ({ exe: node, args: [join(ROOT, 'ml-service', 'run.mjs'), ...args], cwd: ROOT });
-const backend = (script, ...args) => ({ exe: node, args: ['--env-file-if-exists=.env', `scripts/${script}`, ...args], cwd: BACKEND });
+// On a server the ML and the site databases arrive as different variables: DATABASE_URL
+// is the ML's Postgres, and SITE_DATABASE_URL the site's MySQL.
+const siteEnv = () => (process.env.SITE_DATABASE_URL ? { ...process.env, DATABASE_URL: process.env.SITE_DATABASE_URL } : process.env);
+const backend = (script, ...args) => ({ exe: node, args: ['--env-file-if-exists=.env', `scripts/${script}`, ...args], cwd: BACKEND, env: siteEnv() });
 
 /** Football seasons run from July: November 2026 is in "2026-27". */
 export function season(date = new Date()) {
@@ -53,7 +56,7 @@ async function main() {
   try {
     for (const step of chosen) {
       log(`step ${step.name} started`);
-      const { code, tail } = await run(step.exe, step.args, { cwd: step.cwd });
+      const { code, tail } = await run(step.exe, step.args, { cwd: step.cwd, ...(step.env ? { env: step.env } : {}) });
       const ok = code === 0 && !step.failIf?.test(tail);
       results.push({ name: step.name, ok, finishedAt: new Date().toISOString(), output: tail.trim().split('\n').slice(-6).join('\n') });
       log(`step ${step.name} ${ok ? 'succeeded' : `FAILED (exit ${code})`}\n${tail.trim().split('\n').slice(-6).join('\n')}`);

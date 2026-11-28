@@ -81,7 +81,7 @@ export default function Register() {
           <PasswordInput error={errors.confirm} autoComplete="new-password" value={form.confirm} onChange={set('confirm')} placeholder="Repeat password" />
         </Field>
         <Field error={errors.terms}>
-          <label className="flex items-start gap-2 text-sm text-muted"><input type="checkbox" checked={form.terms} onChange={set('terms')} className="mt-1 accent-brand" /> <span>I am 18 or older, I agree to the <a href="#/terms" target="_blank" rel="noopener" className="text-brand underline">Terms of Use</a> and <a href="#/privacy" target="_blank" rel="noopener" className="text-brand underline">Privacy Policy</a>, and I understand predictions are estimates, not guarantees.</span></label>
+          <label className="flex items-start gap-2 text-sm text-muted"><input type="checkbox" checked={form.terms} onChange={set('terms')} className="mt-1 accent-brand" /> <span>I am 18 or older, I agree to the <a href="/terms" target="_blank" rel="noopener" className="text-brand underline">Terms of Use</a> and <a href="/privacy" target="_blank" rel="noopener" className="text-brand underline">Privacy Policy</a>, and I understand predictions are estimates, not guarantees.</span></label>
         </Field>
         <button className="btn-primary btn-lg w-full" disabled={busy}>{busy ? <><span className="spinner" /> Creating account…</> : 'Register'}</button>
       </form>
