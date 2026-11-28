@@ -46,3 +46,12 @@ def test_bands_skip_thin_groups():
     prob = np.array([0.55] * 25 + [0.9] * 3)
     out = w.bands(prob, np.ones_like(prob), [0.5, 0.6, 1.01])
     assert [b["matches"] for b in out] == [25]
+
+
+def test_strong_picks_count_only_clear_favourites():
+    probs = np.array([[0.75, 0.15, 0.10]] * 60 + [[0.10, 0.15, 0.75]] * 20 + [[0.5, 0.3, 0.2]] * 40)
+    y = np.array([0] * 45 + [1] * 15 + [2] * 20 + [2] * 40)
+    out = w.strong_picks(probs, y)
+    assert out["matches"] == 80
+    assert out["observed"] == round((45 + 20) / 80, 4)
+    assert w.strong_picks(probs[-40:], y[-40:]) is None

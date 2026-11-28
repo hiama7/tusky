@@ -46,6 +46,12 @@ export default function TrackRecord() {
                 <Figure label="Probability error (Brier)" value={s.brier} hint="0 is perfect; lower is better" />
               </div>
 
+              {data.strongPicks.matches > 0 && (
+                <p className="mt-4 text-sm text-muted">
+                  Strong picks (football, favourite at {data.strongPicks.threshold}% or more): {data.strongPicks.correct} of {data.strongPicks.matches} won.
+                </p>
+              )}
+
               <h2 className="mt-12 text-xl font-bold">Do the percentages mean what they say?</h2>
               <div className="card mt-4 overflow-x-auto">
                 <table className="w-full text-sm">

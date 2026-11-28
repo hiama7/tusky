@@ -26,6 +26,8 @@ from .pipeline import _baseline_probs, _probs, backtest
 CUTOFF = datetime(2025, 7, 1, tzinfo=timezone.utc)
 EARLY_MATCHES = 5
 MIN_SEGMENT = 50
+# the site labels favourites at or above this; keep in step with strongPickService.js
+STRONG_PICK = 0.7
 
 
 def season_of(ts: pd.Series) -> pd.Series:
@@ -111,6 +113,16 @@ def bands(prob: np.ndarray, hit: np.ndarray, edges: list[float]) -> list[dict]:
     return out
 
 
+def strong_picks(probs: np.ndarray, y: np.ndarray, threshold: float = STRONG_PICK) -> dict | None:
+    """How often the favourite won when it was given at least `threshold`."""
+    mask = probs.max(axis=1) >= threshold
+    n = int(mask.sum())
+    if n < MIN_SEGMENT:
+        return None
+    hit = (probs.argmax(axis=1) == y)[mask].astype(float)
+    return {"threshold": threshold, "matches": n, "share": round(float(mask.mean()), 4), "observed": round(float(hit.mean()), 4), "ci95": bootstrap_ci(hit)}
+
+
 def analyse(matches: pd.DataFrame, comp_names: dict[int, str], kind: str = "glm", cutoff: datetime = CUTOFF) -> dict:
     """`kind` should be the production model's kind, so that this describes what is live."""
     cfg = CONFIGS["football"]
@@ -156,6 +168,7 @@ def analyse(matches: pd.DataFrame, comp_names: dict[int, str], kind: str = "glm"
             "bands": bands(probs[:, 1], (y == 1).astype(float), [0.0, 0.2, 0.3, 1.01]),
         },
         "home_favourites": bands(probs[:, 0], (y == 0).astype(float), [0.5, 0.6, 0.7, 1.01]),
+        "strong_picks": strong_picks(probs, y),
         "calibration_fix": {
             "exponent": gamma,
             "chosen_from_matches": int(len(oof)),

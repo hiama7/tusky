@@ -2,6 +2,8 @@
 // matches are visible. Each match carries the viewer's unlock status but never
 // any prediction content.
 import { prisma } from '../config/database.js';
+import { newsFor } from '../services/matchNewsService.js';
+import { playersFor } from '../services/playersService.js';
 import { standingsFor } from '../services/standingsService.js';
 import { ApiError, ok, paginate } from '../utils/apiResponse.js';
 import { accessMap } from '../services/predictionService.js';
@@ -74,14 +76,29 @@ export async function matchDetails(req, res) {
   ok(res, { match: S.match(m, access.get(m.id)) });
 }
 
-/** GET /api/matches/:id/standings — the competition's league table, if available. */
-export async function matchStandings(req, res) {
+/** The published match's sport, competition and team names. */
+async function fixtureOf(req) {
   const m = await prisma.match.findFirst({
     where: { id: req.valid.params.id, published: true, archivedAt: null },
     include: { sport: true, tournament: true, teamA: true, teamB: true },
   });
   if (!m) throw ApiError.notFound('Match not found');
-  ok(res, await standingsFor({ sport: m.sport.slug, tournament: m.tournament.name, teamA: m.teamA.name, teamB: m.teamB.name }));
+  return { sport: m.sport.slug, tournament: m.tournament.name, teamA: m.teamA.name, teamB: m.teamB.name };
+}
+
+/** GET /api/matches/:id/standings — the competition's league table, if available. */
+export async function matchStandings(req, res) {
+  ok(res, await standingsFor(await fixtureOf(req)));
+}
+
+/** GET /api/matches/:id/players — both squads with this season's scoring figures. */
+export async function matchPlayers(req, res) {
+  ok(res, await playersFor(await fixtureOf(req)));
+}
+
+/** GET /api/matches/:id/news — recent published articles naming either team. */
+export async function matchNews(req, res) {
+  ok(res, { items: await newsFor(await fixtureOf(req)) });
 }
 
 export async function matchResults(req, res) {

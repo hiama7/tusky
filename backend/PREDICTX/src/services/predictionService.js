@@ -11,6 +11,7 @@ import { prisma } from '../config/database.js';
 import { ApiError } from '../utils/apiResponse.js';
 import { toDecimal } from '../utils/money.js';
 import * as S from './serializers.js';
+import { strongPick } from './strongPickService.js';
 
 /** Returns the active subscriptions that grant access right now (with plan sport policy). */
 export function activeSubscriptions(userId, db = prisma) {
@@ -53,7 +54,7 @@ export async function accessFor(userId, match, db = prisma) {
 export async function predictionForViewer(matchId, userId) {
   const match = await prisma.match.findFirst({
     where: { id: matchId, published: true, archivedAt: null },
-    include: { prediction: true },
+    include: { prediction: true, sport: true },
   });
   if (!match) throw ApiError.notFound('Match not found');
   const published = match.prediction?.publicationStatus === 'PUBLISHED';
@@ -63,7 +64,9 @@ export async function predictionForViewer(matchId, userId) {
   const keepsAccess = (reason === 'purchase' || reason === 'trial') && match.prediction?.publishedAt;
   if (!published && !keepsAccess) return { ...S.lockedPrediction(match, { available: false }), unlocked: Boolean(reason), unlockReason: reason };
   if (!reason) return S.lockedPrediction(match, { available: true });
-  return { locked: false, unlockReason: reason, prediction: S.prediction(match.prediction) };
+  // the strong-pick label would give the answer away, so only entitled viewers get it
+  const full = S.prediction(match.prediction);
+  return { locked: false, unlockReason: reason, prediction: { ...full, strongPick: strongPick(full, match.sport.slug) } };
 }
 
 // ----------------------------------------------------------------------------- validation
