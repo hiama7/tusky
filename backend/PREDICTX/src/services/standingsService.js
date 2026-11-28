@@ -89,9 +89,12 @@ function cached(code) {
   return entry.value;
 }
 
+/** The provider's code for a competition, if it is one of the free plan's football ones. */
+export const competitionCode = (sport, tournament) => (sport === 'football' ? CODES[String(tournament).trim().toLowerCase()] : undefined);
+
 /** Table for a match's competition, with the two playing teams marked. */
 export async function standingsFor({ sport, tournament, teamA, teamB }) {
-  const code = sport === 'football' ? CODES[String(tournament).trim().toLowerCase()] : undefined;
+  const code = competitionCode(sport, tournament);
   if (!env.FOOTBALL_DATA_API_KEY || !code) return { available: false };
   const table = await cached(code);
   if (!table) return { available: false };

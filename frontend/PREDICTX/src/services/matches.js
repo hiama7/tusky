@@ -15,6 +15,10 @@ export const getMatch = (id) => get(`/matches/${id}`).then((d) => d.match);
 /** → { available: false } or { available: true, competition, rows, attribution } */
 export const getStandings = (matchId) => get(`/matches/${matchId}/standings`);
 
+/** → { available: false } or { available: true, teams, hasFigures, attribution } */
+export const getMatchPlayers = (matchId) => get(`/matches/${matchId}/players`);
+export const getMatchNews = (matchId) => get(`/matches/${matchId}/news`).then((d) => d.items);
+
 /** → { locked: true, price, available } or { locked: false, unlockReason, prediction } */
 export const getPrediction = (matchId) => get(`/matches/${matchId}/prediction`);
 export const getPredictions = () => get('/predictions', { query: { limit: 100 } }).then((d) => d.items);

@@ -15,6 +15,8 @@ import { DemoTag, EmptyState, Modal, ProbBar, Skeleton, TeamCrest } from '../../
 import ProbabilityChart from '../../components/match/ProbabilityChart';
 import PaymentModal from '../../components/match/PaymentModal';
 import LeagueTable from '../../components/match/LeagueTable';
+import MatchNews from '../../components/match/MatchNews';
+import TeamPlayers from '../../components/match/TeamPlayers';
 import { useToast } from '../../context/ToastContext';
 import { useAsync } from '../../hooks/useAsync';
 import { getMatch, getPrediction } from '../../services/matches';
@@ -38,6 +40,17 @@ function Panel({ icon: Icon, title, children, className = '' }) {
       <h3 className="mb-4 flex items-center gap-2 font-semibold"><Icon className="h-4 w-4 text-brand" /> {title}</h3>
       {children}
     </section>
+  );
+}
+
+/** What the label has been worth when tested, said next to the label itself. */
+function StrongPickNote({ record }) {
+  return (
+    <p className="mt-3 rounded-xl border border-green/25 bg-green/10 px-3 py-2 text-xs text-muted">
+      The favourite here is at {record.threshold}% or more. In tests on matches the model had not seen
+      ({fmtDate(record.from)} to {fmtDate(record.to)}), such favourites won {record.won}% of {record.matches} matches,
+      so about {100 - record.won} in 100 did not. It is not a guarantee.
+    </p>
   );
 }
 
@@ -225,7 +238,9 @@ export default function MatchDetails() {
                   <span className="badge-accent"><Gauge className="h-3 w-3" /> Confidence: {p.confidence}</span>
                   {unlocked && <span className="badge-muted">{p.source === 'MODEL' ? `Model ${p.modelVersion || ''}` : 'Analyst prediction'} · v{p.version}</span>}
                   {unlocked && p.isDemo && <DemoTag>Sample content</DemoTag>}
+                  {unlocked && p.strongPick && <span className="badge-green"><CheckCircle2 className="h-3 w-3" /> Strong pick</span>}
                 </div>
+                {unlocked && p.strongPick && <StrongPickNote record={p.strongPick} />}
                 <p className="mt-4 text-sm leading-relaxed text-muted">{p.summary}</p>
                 {unlocked && (p.pitch || p.weather) && (
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -273,11 +288,13 @@ export default function MatchDetails() {
             <Analysis match={match} p={p} locked={!unlocked} />
           </div>
 
-          <LeagueTable matchId={match.id} />
-
           <p className="text-center text-xs text-muted">Predictions are probabilistic analysis for entertainment and research. They never guarantee a result.</p>
         </>
       )}
+
+      <TeamPlayers matchId={match.id} />
+      <MatchNews matchId={match.id} />
+      <LeagueTable matchId={match.id} />
 
       <PaymentModal
         open={payOpen}

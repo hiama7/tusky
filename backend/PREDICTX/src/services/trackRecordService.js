@@ -5,6 +5,7 @@
 // the prediction was later changed, unpublished or the match archived. Misses
 // are counted exactly like hits.
 import { prisma } from '../config/database.js';
+import { isStrongPick, STRONG_PICK } from './strongPickService.js';
 
 const OUTCOMES = ['TEAM_A', 'DRAW', 'TEAM_B'];
 const BANDS = [[0, 40, 'under 40%'], [40, 50, '40–50%'], [50, 60, '50–60%'], [60, 70, '60–70%'], [70, 101, '70% and over']];
@@ -78,6 +79,7 @@ export async function trackRecord({ sport, limit = 50 } = {}) {
       matchId: m.id,
       startsAt: m.startsAt,
       sport: m.sport.name,
+      sportSlug: m.sport.slug,
       tournament: m.tournament.name,
       teamA: m.teamA.name,
       teamB: m.teamB.name,
@@ -91,5 +93,12 @@ export async function trackRecord({ sport, limit = 50 } = {}) {
       publishedAt: version.publishedAt,
     });
   }
-  return { summary: summarise(rows), awaitingResult: awaiting, items: rows.slice(0, limit) };
+  // the live check on the label: published football predictions, counted after the fact
+  const strong = rows.filter((r) => r.sportSlug === 'football' && isStrongPick(r));
+  return {
+    summary: summarise(rows),
+    strongPicks: { threshold: STRONG_PICK, matches: strong.length, correct: strong.filter((r) => r.correct).length },
+    awaitingResult: awaiting,
+    items: rows.slice(0, limit).map(({ sportSlug: _slug, ...row }) => row),
+  };
 }
