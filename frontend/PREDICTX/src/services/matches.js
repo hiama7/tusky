@@ -10,6 +10,17 @@ export const getTournaments = (sport) => get('/tournaments', { query: { sport } 
 /** filters: { sport, tournament, status, from, to, q, featured, upcoming, page, limit } */
 export const getMatches = (filters = {}) => get('/matches', { query: { limit: 100, ...filters } }).then((d) => d.items);
 export const getMatchPage = (filters = {}) => get('/matches', { query: filters });
+
+/** Every match for these filters, so counts and client-side filters are complete (up to 500). */
+export async function getAllMatches(filters = {}) {
+  const items = [];
+  for (let page = 1; page <= 5; page += 1) {
+    const data = await get('/matches', { query: { limit: 100, ...filters, page } });
+    items.push(...data.items);
+    if (page >= data.pagination.pages) break;
+  }
+  return items;
+}
 export const getMatch = (id) => get(`/matches/${id}`).then((d) => d.match);
 
 /** → { available: false } or { available: true, competition, rows, attribution } */

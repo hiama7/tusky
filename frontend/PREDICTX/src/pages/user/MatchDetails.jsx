@@ -197,11 +197,11 @@ export default function MatchDetails() {
               <TeamCrest team={match.teamB} size="lg" />
             </div>
           </div>
-          <div className="mt-8 grid gap-3 border-t border-white/5 pt-5 text-sm text-muted sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid grid-cols-2 gap-3 border-t border-white/5 pt-5 text-sm text-muted lg:grid-cols-4">
             <p className="flex items-center gap-2"><Trophy className="h-4 w-4" /> {match.tournament}</p>
             <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4" /> {fmtDate(match.date, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}</p>
             <p className="flex items-center gap-2"><Clock3 className="h-4 w-4" /> {fmtTime(match.date)} IST</p>
-            <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {match.venue}</p>
+            {match.venue && match.venue !== 'Venue to be confirmed' && <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {match.venue}</p>}
           </div>
           {match.result && (
             <p className="mt-4 rounded-xl bg-green/10 px-4 py-3 text-sm text-green"><b>Result:</b> {match.result.description}{match.result.score ? ` (${match.result.score})` : ''}</p>
