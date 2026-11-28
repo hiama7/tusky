@@ -20,12 +20,12 @@ export default function MatchCard({ match, unlocked = match.unlocked, to, compac
       <div className={cx('flex items-center justify-between gap-2 px-5', compact ? 'py-4' : 'py-6')}>
         <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
           <TeamCrest team={match.teamA} />
-          <p className="w-full truncate text-sm font-semibold">{match.teamA.name}</p>
+          <p className="line-clamp-2 min-h-10 w-full text-sm font-semibold leading-5" title={match.teamA.name}>{match.teamA.name}</p>
         </div>
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-accent/30 bg-ink-2 font-display text-xs font-bold text-white shadow-[0_0_22px_-4px_rgba(255,255,255,.75)] transition-transform duration-500 group-hover:rotate-[360deg]">VS</span>
         <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
           <TeamCrest team={match.teamB} />
-          <p className="w-full truncate text-sm font-semibold">{match.teamB.name}</p>
+          <p className="line-clamp-2 min-h-10 w-full text-sm font-semibold leading-5" title={match.teamB.name}>{match.teamB.name}</p>
         </div>
       </div>
 

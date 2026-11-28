@@ -6,6 +6,15 @@ export const fmtDate = (iso, opts = { day: 'numeric', month: 'short', year: 'num
 export const fmtTime = (iso) => new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 export const fmtDateTime = (iso) => `${fmtDate(iso, { day: 'numeric', month: 'short' })}, ${fmtTime(iso)}`;
 
+/** Heading for a day of fixtures, in the viewer's own time zone. */
+export function dayLabel(iso, now = new Date()) {
+  const date = new Date(iso);
+  const midnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((midnight(date) - midnight(now)) / 86400e3);
+  const full = fmtDate(iso, { weekday: 'long', day: 'numeric', month: 'long' });
+  return days === 0 ? `Today · ${full}` : days === 1 ? `Tomorrow · ${full}` : full;
+}
+
 export function timeAgo(iso) {
   const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 60) return 'just now';

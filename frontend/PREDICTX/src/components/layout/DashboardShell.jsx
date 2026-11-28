@@ -44,7 +44,7 @@ export default function DashboardShell({ nav, onLogout, home, topbarRight, admin
       <div className="main-area">
         <header className="topbar">
           <button className="rounded-lg p-2 text-white hover:bg-white/5 lg:hidden" onClick={() => setOpen(true)} aria-label="Open sidebar"><Menu className="h-5 w-5" /></button>
-          <p className="truncate text-sm font-medium text-muted">{admin ? 'Admin' : 'Dashboard'} <span className="text-white/30">/</span> <span className="text-white">{current}</span></p>
+          <p className="truncate text-sm font-medium text-muted"><span className="hidden sm:inline">{admin ? 'Admin' : 'Dashboard'} <span className="text-white/30">/</span> </span><span className="text-white">{current}</span></p>
           <div className="ml-auto flex items-center gap-2">{topbarRight}</div>
         </header>
         <main key={pathname} className="content page-enter"><Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center"><span className="spinner" /></div>}><Outlet /></Suspense></main>
