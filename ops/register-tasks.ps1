@@ -22,7 +22,8 @@ foreach ($t in $tasks) {
   }
   $action = New-ScheduledTaskAction -Execute $node -Argument $t.Args -WorkingDirectory $root
   $trigger = New-ScheduledTaskTrigger -Daily -At $t.At
-  $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 1)
+  # run on a laptop's battery too: Windows would otherwise skip or stop the task
+  $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 1)
   Register-ScheduledTask -TaskName $t.Name -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null
   Write-Host "Scheduled $($t.Name) at $($t.At)"
 }
